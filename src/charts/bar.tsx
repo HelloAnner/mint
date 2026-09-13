@@ -105,7 +105,7 @@ const bar: ChartDefinition = {
           legendOffset: horizontal ? -76 : -58,
           format: horizontal ? undefined : format,
         }}
-        legends={keysLegend(legend)}
+        legends={keysLegend(legend, keys)}
         animate={false}
         role="img"
         ariaLabel="柱状图"

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { legendItemWidth } from '../src/charts/common'
 import { runRender } from '../src/commands/render'
 import { MintError } from '../src/core/errors'
 import { asGraph, asHierarchy, asPairs, asSeries, inferIndexKeys } from '../src/charts/helpers'
@@ -107,6 +108,13 @@ describe('错误处理', () => {
         format: 'png',
       }),
     ).rejects.toThrow(/CANVAS_TOO_SMALL|画布太小/)
+  })
+})
+
+describe('图例布局', () => {
+  test('图例项宽度按标签长度自适应', () => {
+    expect(legendItemWidth(['A'])).toBe(64)
+    expect(legendItemWidth(['沙箱与代码执行失败'])).toBeGreaterThan(legendItemWidth(['其他']))
   })
 })
 

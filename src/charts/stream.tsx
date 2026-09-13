@@ -101,7 +101,7 @@ const stream: ChartDefinition = {
           legendOffset: -64,
           format,
         }}
-        legends={keysLegend(legend)}
+        legends={keysLegend(legend, keys)}
         animate={false}
         role="img"
         ariaLabel="堆叠面积图"

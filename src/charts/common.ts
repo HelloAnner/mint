@@ -45,6 +45,21 @@ export function bottomMargin(hasLegend: boolean): number {
 }
 
 /**
+ * 按最长标签估算图例项宽度。
+ * 固定 itemWidth 会让长中文标签溢出槽位、和相邻项压叠，这里按字符宽度自适应。
+ * CJK 约 13px/字，ASCII 约 7.5px/字，再加上符号与左右留白。
+ */
+export function legendItemWidth(labels: readonly string[]): number {
+  const textWidth = (label: string) => {
+    let width = 0
+    for (const ch of label) width += /[\u2E80-\uFFFF]/.test(ch) ? 13 : 7.5
+    return width
+  }
+  const max = labels.reduce((acc, label) => Math.max(acc, textWidth(label)), 0)
+  return Math.ceil(Math.max(64, max + 34))
+}
+
+/**
  * 折线/散点类图表的图例。
  * 显式给出 data，避免 nivo 按字母序重排，导致图例顺序和系列顺序不一致。
  */
@@ -64,7 +79,7 @@ export function seriesLegend(
       anchor: 'top-left' as const,
       direction: 'row' as const,
       translateY: -40,
-      itemWidth: 92,
+      itemWidth: legendItemWidth(series.map((s) => s.id)),
       itemHeight: 18,
       itemsSpacing: 14,
       symbolSize: 9,
@@ -74,7 +89,7 @@ export function seriesLegend(
 }
 
 /** 由 keys 生成图例（柱状/面积等以 key 为系列的图表）。 */
-export function keysLegend(hasLegend: boolean) {
+export function keysLegend(hasLegend: boolean, keys: readonly string[] = []) {
   if (!hasLegend) return []
   return [
     {
@@ -82,7 +97,7 @@ export function keysLegend(hasLegend: boolean) {
       anchor: 'top-right' as const,
       direction: 'row' as const,
       translateY: -40,
-      itemWidth: 80,
+      itemWidth: legendItemWidth(keys),
       itemHeight: 18,
       itemsSpacing: 12,
       symbolSize: 9,
