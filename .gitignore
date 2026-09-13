@@ -1,0 +1,47 @@
+# ── 依赖 ─────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+.yarn/
+
+# ── 构建产物 ─────────────────────────────────────────
+dist/
+build/
+*.tsbuildinfo
+*.bin
+
+# ── 运行与示例产物（图片请按需另存，不要提交到这里）──
+out/
+output/
+*.tmp
+*.temp
+
+# ── 日志 ─────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun-debug.log*
+
+# ── 环境变量 ─────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── 编辑器与系统 ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+*~
+
+# ── 临时草稿 ─────────────────────────────────────────
+.spike/
+.probe/
+scratch/
+*.code-workspace
