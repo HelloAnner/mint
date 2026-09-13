@@ -47,10 +47,13 @@ export async function runRender(argv: string[]): Promise<RenderCommandResult> {
 
   const definition = requireChart(chartId)
   const loaded = await loadData(stringValue(parsed, 'data'))
+  const usingExampleData = loaded === undefined
   const data = loaded?.data ?? definition.example.data
 
+  // 示例里的 options 只是为了让内置 demo 好看，绝不能当作所有渲染的默认值：
+  // 否则用户数据会被塞进「营收（百万元）」「DAU（万）」这类示例坐标轴标题。
   const options = {
-    ...(definition.example.options ?? {}),
+    ...(usingExampleData ? (definition.example.options ?? {}) : {}),
     ...parseOptionsJson(stringValue(parsed, 'options')),
     ...parseSetFlags(listValue(parsed, 'set')),
   }

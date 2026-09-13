@@ -247,15 +247,19 @@ export function asHierarchy(data: unknown, options: { root?: string } = {}): Hie
 
   if (Array.isArray(data) && data.length > 0) {
     const rows = data.filter(isPlainObject) as Row[]
-    const hasPath = rows.every((r) => typeof (r.path ?? r.name) === 'string')
+    // 只有显式写了 path 字段才按 "/" 拆层级；name 里的斜杠是普通字符
+    // （否则「文件/投影等待超时」会被误拆成两层）。
+    const usesPath = rows.every((r) => typeof r.path === 'string')
+    const usesName = rows.every((r) => typeof r.name === 'string')
+    const hasPath = usesPath || usesName
 
     if (hasPath) {
       const root: HierarchyNode = { name: rootName, children: [] }
 
       for (const row of rows) {
-        const path = String(row.path ?? row.name)
+        const raw = String(usesPath ? row.path : row.name)
         const value = typeof row.value === 'number' ? row.value : 1
-        const segments = path.split('/').map((s) => s.trim()).filter(Boolean)
+        const segments = (usesPath ? raw.split('/') : [raw]).map((s) => s.trim()).filter(Boolean)
         let node = root
         for (const [depth, segment] of segments.entries()) {
           node.children ??= []
@@ -291,8 +295,9 @@ function pruneEmpty(node: HierarchyNode): number {
       sum += v
       return true
     })
-    if (node.value === undefined) node.value = sum
-    return node.value ?? sum
+    // 有子节点的内部节点不写 value：nivo 会由 children 自动求和，
+    // 显式写入会让 treemap 的面积分配出现根节点大面积留白。
+    return sum
   }
   return node.value ?? 0
 }
