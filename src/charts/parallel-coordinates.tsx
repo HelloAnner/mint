@@ -42,10 +42,19 @@ const parallelCoordinates: ChartDefinition = {
     const first = rows[0]!
     const numericFields = Object.keys(first).filter((k) => typeof first[k] === 'number')
 
-    const variables =
-      Array.isArray(ctx.options.variables) && ctx.options.variables.length > 0
-        ? (ctx.options.variables as unknown[]).map((v) => ({ key: String(v) }))
-        : numericFields.map((key) => ({ key }))
+    // --set variables=a,b 传入的是字符串，这里统一成数组
+    const rawVariables = ctx.options.variables
+    const variableIds =
+      typeof rawVariables === 'string'
+        ? rawVariables.split(',').map((s) => s.trim()).filter(Boolean)
+        : Array.isArray(rawVariables) && rawVariables.length > 0
+          ? (rawVariables as unknown[]).map(String)
+          : numericFields
+
+    // nivo 的 variables 需要 id（轴标识）和 value（取数字段）两个属性：
+    // 只给 key 会让轴的 point scale 域变成 [undefined…]，所有轴塌到同一位置、
+    // 数据也取不到值，最终渲染出一张空白图（只有一根竖线）。
+    const variables = variableIds.map((id) => ({ id, value: id, label: id }))
 
     if (variables.length < 2) {
       fail(
@@ -66,7 +75,7 @@ const parallelCoordinates: ChartDefinition = {
         margin={{ top: 40, right: 50, bottom: 40, left: 50 }}
         layout="horizontal"
         lineWidth={ctx.options.lineWidth ?? 2}
-        opacity={ctx.options.opacity ?? 0.55}
+        lineOpacity={ctx.options.opacity ?? 0.55}
         animate={false}
         role="img"
         ariaLabel="平行坐标图"

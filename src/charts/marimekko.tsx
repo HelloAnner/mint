@@ -1,7 +1,7 @@
 import { Marimekko } from '@nivo/marimekko'
 import type { ChartDefinition } from '../core/types'
 import { asRows, isPlainObject } from './helpers'
-import { axisLegendOptions, formatOptions, formatterFrom, legendOption, topMargin } from './common'
+import { axisLegendOptions, formatOptions, formatterFrom, legendItemWidth, legendOption, topMargin } from './common'
 import { fail } from '../core/errors'
 
 /**
@@ -76,6 +76,13 @@ value 决定该组的宽度，其余数值字段构成组内的堆叠，会自�
 
     const format = formatterFrom(ctx.options)
     const legend = ctx.options.legend !== false
+    // nivo 的 marimekko 图例不支持 dataFrom='keys'，必须显式给出 data，
+    // 否则组内构成没有任何颜色说明（此前这里直接写死 legends={[]}）。
+    const legendData = dimensions.map((id, i) => ({
+      id,
+      label: id,
+      color: ctx.colors[i % ctx.colors.length]!,
+    }))
 
     return (
       <Marimekko
@@ -117,7 +124,23 @@ value 决定该组的宽度，其余数值字段构成组内的堆叠，会自�
           legendOffset: -58,
           format,
         }}
-        legends={[]}
+        legends={
+          legend
+            ? [
+                {
+                  data: legendData,
+                  anchor: 'top-left' as const,
+                  direction: 'row' as const,
+                  translateY: -40,
+                  itemWidth: legendItemWidth(dimensions),
+                  itemHeight: 18,
+                  itemsSpacing: 12,
+                  symbolSize: 9,
+                  symbolShape: 'circle' as const,
+                },
+              ]
+            : []
+        }
         animate={false}
         role="img"
       />

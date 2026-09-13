@@ -101,3 +101,41 @@ describe('主题与调色板', () => {
     }
   })
 })
+
+/**
+ * 只断言「产出了 PNG」会漏掉「画布空白」这类问题：
+ * 例如平行坐标图曾因 variables 字段名不对，每张图都只画出一根竖线。
+ */
+describe('图表内容不塌陷', () => {
+  test('平行坐标图为每个对象画出数据线', async () => {
+    const chart = charts.find((c) => c.id === 'parallel-coordinates')!
+    const result = await renderChart({
+      definition: chart,
+      data: chart.example.data,
+      width: 900,
+      height: 540,
+      scale: 1,
+      theme: 'light',
+      palette: 'mint',
+      format: 'svg',
+    })
+    const paths = (result.svg.match(/<path/g) ?? []).length
+    expect(paths).toBeGreaterThanOrEqual((chart.example.data as unknown[]).length)
+  })
+
+  test('马赛克图渲染出组内构成的图例', async () => {
+    const chart = charts.find((c) => c.id === 'marimekko')!
+    const result = await renderChart({
+      definition: chart,
+      data: chart.example.data,
+      width: 900,
+      height: 540,
+      scale: 1,
+      theme: 'light',
+      palette: 'mint',
+      format: 'svg',
+    })
+    expect(result.svg).toContain('新客')
+    expect(result.svg).toContain('老客')
+  })
+})
