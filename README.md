@@ -10,6 +10,10 @@ mint 是给 AI 和工程师用的图表 CLI：内置 20 种经过端到端测试
 中文标签开箱可用。所有图表由 [nivo](https://github.com/plouc/nivo) 在服务端渲染成 SVG，
 再由 [resvg](https://github.com/RazrFalcon/resvg) 光栅化为 PNG —— **不依赖浏览器**，单张图通常 100ms 内完成。
 
+[![CI](https://github.com/HelloAnner/mint/actions/workflows/ci.yml/badge.svg)](https://github.com/HelloAnner/mint/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/HelloAnner/mint?label=release)](https://github.com/HelloAnner/mint/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
+
 ---
 
 # 🤖 给 AI Agent：安装说明
@@ -47,7 +51,7 @@ command -v mint && mint --version && mint doctor
 
 | 结果 | 下一步 |
 |------|--------|
-| 没有输出 / 命令不存在 | 没装，继续第 1 步 |
+| 没有输出 / 命令不存在 | 没装，继续第 1 步（只需要 curl，不需要 bun） |
 | 有版本号，但 `doctor` 里有 ✗ | 看最后面的「排错」 |
 | `doctor` 全部 ✓ | **已经装好了**，跳到「装好之后怎么用」 |
 
@@ -124,7 +128,7 @@ ln -sfn "$PWD/skills/mint" ~/.agents/skills/mint  # 装 skill
 
 ## 第 2 步：安装 skill
 
-**`make install` 里已经包含了这一步。** 需要单独装、重装或换目录时：
+**一键脚本和 `make install` 里都已经包含了这一步。** 需要单独装、重装或换目录时：
 
 ```bash
 mint install skill            # 装到 ~/.agents/skills/mint（默认位置）
@@ -198,7 +202,7 @@ rm -rf ~/.local/share/mint
 | 现象 | 原因与处理 |
 |------|-----------|
 | `mint: command not found` | `~/.local/bin` 不在 PATH，见 1.3 |
-| `bun: command not found` | 没装 bun，见 1.1 |
+| `bun: command not found` | 没装 bun（只有「方式 B 从源码编译」才需要），见 1.2 |
 | `make: command not found` | macOS 跑 `xcode-select --install`；或按「没有 make 的替代方案」手动装 |
 | `doctor` 字体一项是 ✗ | 系统缺中文字体；装一个（如 Noto Sans CJK），或设 `MINT_FONT=/path/to/font.ttc` |
 | 图里中文显示成方框 | 同上，字体没匹配上 |
@@ -210,6 +214,8 @@ rm -rf ~/.local/share/mint
 
 ## 环境变量
 
+运行期（影响出图与 skill 行为）：
+
 | 变量 | 作用 |
 |------|------|
 | `MINT_FONT` | 指定字体文件路径（.ttf / .otf / .ttc） |
@@ -217,6 +223,14 @@ rm -rf ~/.local/share/mint
 | `MINT_NO_AUTO_SKILL=1` | 关闭运行时的 skill 自动安装 |
 | `MINT_DEBUG=1` | 打印 React 渲染告警与错误堆栈 |
 | `MINT_QUIET=1` | 静默模式 |
+
+安装期（只被 `install.sh` 读取）：
+
+| 变量 | 作用 |
+|------|------|
+| `MINT_PREFIX` | 安装前缀，默认 `~/.local`（二进制落到 `$MINT_PREFIX/bin`） |
+| `MINT_VERSION` | `latest` 或具体 tag，如 `v0.1.0` |
+| `MINT_REPO` | 覆盖仓库，默认 `HelloAnner/mint` |
 
 ---
 
@@ -272,6 +286,8 @@ mint doctor                       环境自检
 mint install skill                安装 skill 软链
 mint uninstall skill              移除 skill 软链
 mint skill [status|path|list|show]  查看 skill 状态
+mint version                      打印版本号（也可用 --version / -v）
+mint help                         打印帮助（也可用 --help / -h）
 ```
 
 渲染参数：
@@ -289,6 +305,7 @@ mint skill [status|path|list|show]  查看 skill 状态
 | `--set k=v` | 图表选项，可重复 | — |
 | `--options '<json>'` | 选项 JSON | — |
 | `--font <path>` | 指定字体（.ttf/.otf/.ttc） | 自动探测 |
+| `--border` | 给图像描一圈细边 | — |
 | `--json` | 输出机器可读结果 | — |
 
 退出码：`0` 成功，`1` 运行失败，`2` 用法错误。
@@ -341,6 +358,14 @@ mint batch report.json
 ```
 
 `dataFile` 相对 spec 文件所在目录解析；某一项失败不会中断其余渲染，最后统一汇总。
+
+批量专用参数：
+
+| 参数 | 说明 |
+|------|------|
+| `--outdir <dir>` | 把所有产物重定位到这个根目录，保留 spec 里的相对路径 |
+| `--stop-on-error` | 遇到第一个失败就停止，默认全部跑完再汇总 |
+| `--json` | 输出机器可读的汇总结果 |
 
 ## 主题与调色板
 
@@ -397,7 +422,10 @@ src/
   generated/             由 scripts/embed.ts 生成（内嵌文件清单）
 skills/mint/             skill 内容（SKILL.md + references）
 scripts/                 embed（生成文档与内嵌清单）、build（编译）、examples
-tests/                   54 项测试，含每张图的端到端渲染
+tests/                   57 项测试，含每张图的端到端渲染
+.github/workflows/       ci.yml（类型检查 / 测试 / 构建）、release.yml（多平台发布）
+docs/images/             README 用的预览图
+install.sh               curl 一键安装脚本
 ```
 
 ## Skill 机制
@@ -418,16 +446,62 @@ skill 里还写死了一条工作纪律：**生成过程中的临时文件（数
 调试用 SVG）必须在交付前全部删除，只保留最终的图片文件**。mint 自身只写 `-o` 指定的那一个
 路径，不产生任何中间文件，所以只要输入侧不发散，收工时目录就是干净的。
 
+## 持续集成与发布
+
+### CI — `.github/workflows/ci.yml`
+
+push 到 `main` 或提 PR 时自动跑，任何一步失败都会拦住：
+
+| 步骤 | 命令 |
+|------|------|
+| 类型检查 | `bunx tsc --noEmit` |
+| 测试 | `bun test` —— 57 项，含每张图的端到端渲染 |
+| 构建 | `bun run scripts/build.ts` |
+| 二进制自检 | `./dist/mint doctor` |
+
+CI 里额外装了 `fonts-noto-cjk`：不装的话中文会落到 DejaVu 兜底，测试就覆盖不到中文字体这条真实路径。
+
+### 发布 — `.github/workflows/release.yml`
+
+推一个 `v*` tag 就会自动发版：
+
+```bash
+# 先把 package.json 与 src/version.ts 的版本号改成一致
+git tag -a v0.2.0 -m "mint v0.2.0"
+git push origin v0.2.0
+```
+
+工作流依次做四件事：
+
+1. **校验版本** —— tag 去掉 `v` 后必须等于 `package.json` 的 `version`，否则直接失败
+2. **交叉编译** —— 一次产出 `darwin-arm64` / `darwin-x64` / `linux-x64` / `linux-arm64`
+   四个平台的单文件二进制（resvg 是 wasm、skill 走 file 导入，产物与宿主平台无关）
+3. **校验和** —— 生成 `SHA256SUMS`
+4. **发布** —— 发到 GitHub Release；`install.sh` 从 `/releases/latest/download/` 取产物
+
+所以发版的完整动作就是：改版本号 → 提交 → 打 tag → push，产物和 Release 全自动。
+
 ## 开发
 
 ```bash
-make dev           # 用源码跑 CLI
-make test          # 54 项测试（含每张图的端到端渲染）
-make typecheck     # tsc --noEmit
-make examples      # 把每张图的示例渲染到 out/examples
-make build         # 编译单文件二进制
-make check         # typecheck + test + build
+make help            # 列出全部目标
+
+make dev             # 用源码跑 CLI
+make test            # 57 项测试（含每张图的端到端渲染）
+make typecheck       # tsc --noEmit
+make examples        # 把每张图的示例渲染到 out/examples
+make embed           # 重新生成 charts.md 与内嵌文件清单
+make build           # 编译单文件二进制到 dist/mint
+make check           # typecheck + test + build
+make clean           # 清理 dist/ 与 out/
+
+make install         # = install-cli + install-skill
+make install-cli     # 只编译并安装 CLI
+make install-skill   # 只软链 skill
+make uninstall       # 卸载 CLI 与 skill
 ```
+
+安装位置：`make install PREFIX=/usr/local`（默认 `~/.local`，二进制落在 `$PREFIX/bin`）。
 
 新增一张图表只需要：
 
@@ -437,4 +511,4 @@ make check         # typecheck + test + build
 
 ## License
 
-MIT
+[MIT](LICENSE) © Anner
