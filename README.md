@@ -23,11 +23,15 @@ mint 是给 AI 和工程师用的图表 CLI：内置 20 种经过端到端测试
 
 ## 最快路径
 
+不需要 bun，也不需要克隆源码：
+
 ```bash
-command -v bun >/dev/null || curl -fsSL https://bun.sh/install | bash
-git clone https://github.com/HelloAnner/mint.git ~/.local/share/mint
-cd ~/.local/share/mint && make install
+curl -fsSL https://raw.githubusercontent.com/HelloAnner/mint/main/install.sh | bash
 ```
+
+脚本会：按 `uname` 判断平台 → 下载对应的预编译二进制 → 比对 SHA256 →
+装到 `~/.local/bin/mint` → 把内嵌的 skill 软链到 `~/.agents/skills/mint` → 跑一次 `mint doctor`。
+中间文件都在 `mktemp -d` 里，退出时自动清理。
 
 然后验证（期望每一项都是 ✓）：
 
@@ -49,15 +53,34 @@ command -v mint && mint --version && mint doctor
 
 ## 第 1 步：安装 CLI
 
-### 1.1 确认 bun 可用（用它编译）
+### 1.1 方式 A：一键脚本（推荐）
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/HelloAnner/mint/main/install.sh | bash
+```
+
+可用环境变量覆盖：
+
+```bash
+# 装到别的前缀
+curl -fsSL https://raw.githubusercontent.com/HelloAnner/mint/main/install.sh | MINT_PREFIX=/usr/local bash
+
+# 装指定版本
+curl -fsSL https://raw.githubusercontent.com/HelloAnner/mint/main/install.sh | MINT_VERSION=v0.1.0 bash
+```
+
+预编译产物见 [Releases](https://github.com/HelloAnner/mint/releases)，覆盖
+`darwin-arm64` / `darwin-x64` / `linux-x64` / `linux-arm64`，同时提供 `SHA256SUMS`。
+
+### 1.2 方式 B：从源码编译（需要 bun >= 1.1）
 
 ```bash
 command -v bun || curl -fsSL https://bun.sh/install | bash
 export PATH="$HOME/.bun/bin:$PATH"
-bun --version          # 需要 >= 1.1
+bun --version
 ```
 
-### 1.2 克隆并安装
+然后克隆并安装：
 
 ```bash
 git clone https://github.com/HelloAnner/mint.git ~/.local/share/mint
@@ -163,9 +186,11 @@ mint render bar --data data.json --title "标题" -o out.png
 
 ```bash
 mint uninstall skill          # 移除 ~/.agents/skills/mint 软链
-rm -f ~/.local/bin/mint       # 移除 CLI
-rm -rf ~/.local/share/mint    # 移除源码目录
-rm -rf ~/.mint                # 移除二进制模式释放出来的 skill 内容
+rm -f ~/.local/bin/mint       # 移除 CLI（一键脚本装的也是这个路径）
+rm -rf ~/.mint                # 移除二进制释放出来的 skill 内容
+
+# 只有「从源码编译」安装过才需要：
+rm -rf ~/.local/share/mint
 ```
 
 ## 排错

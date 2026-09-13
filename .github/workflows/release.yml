@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: 交叉编译并发布
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 校验 tag 与 package.json 版本一致
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(bun -e 'console.log((await Bun.file("package.json").json()).version)')"
+          echo "tag=$tag  package.json=$pkg"
+          [ "$tag" = "$pkg" ] || { echo "::error::tag $GITHUB_REF_NAME 与 package.json 的 $pkg 不一致"; exit 1; }
+
+      - name: 安装依赖
+        run: bun install --frozen-lockfile
+
+      - name: 生成内嵌 skill 清单与图表文档
+        run: bun run scripts/embed.ts
+
+      # bun 自带交叉编译：resvg 是 wasm、skill 走 file 导入，产物与宿主平台无关
+      - name: 编译各平台二进制
+        run: |
+          set -euo pipefail
+          mkdir -p release
+
+          declare -a targets=(
+            "mint-darwin-arm64:bun-darwin-arm64"
+            "mint-darwin-x64:bun-darwin-x64"
+            "mint-linux-x64:bun-linux-x64"
+            "mint-linux-arm64:bun-linux-arm64"
+          )
+
+          for entry in "${targets[@]}"; do
+            asset="${entry%%:*}"
+            target="${entry##*:}"
+            echo "::group::编译 $asset"
+            bun build --compile --minify --target="$target" --outfile="release/$asset" src/cli.ts
+            echo "::endgroup::"
+          done
+
+          ls -lh release
+
+      - name: 生成 SHA256 校验和
+        run: |
+          cd release
+          sha256sum mint-* > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: 发布 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/mint-*
+            release/SHA256SUMS
+          generate_release_notes: true
+          draft: false
