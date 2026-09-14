@@ -34,7 +34,7 @@ export function runList(argv: string[]): number {
           description: c.description,
           variants: c.variants ?? [],
           aliases: c.aliases ?? [],
-          nivoPackage: c.nivoPackage,
+          nivoPackage: c.nivoPackage ?? null,
         })),
         null,
         2,
@@ -95,7 +95,7 @@ export function runInfo(argv: string[]): number {
           categoryLabel: CATEGORY_LABELS[chart.category],
           description: chart.description,
           dataShape: chart.dataShape,
-          nivoPackage: chart.nivoPackage,
+          nivoPackage: chart.nivoPackage ?? null,
           variants: chart.variants ?? [],
           aliases: chart.aliases ?? [],
           options: chart.options ?? [],
@@ -116,7 +116,8 @@ export function runInfo(argv: string[]): number {
   }
 
   console.log(`${chart.id} — ${chart.name}（${chart.englishName}）`)
-  console.log(`分类：${CATEGORY_LABELS[chart.category]}　nivo 包：${chart.nivoPackage}`)
+  const engine = chart.nivoPackage ? `nivo 包：${chart.nivoPackage}` : '渲染方式：mint 自绘 SVG'
+  console.log(`分类：${CATEGORY_LABELS[chart.category]}　${engine}`)
   console.log('')
   console.log(chart.description)
   console.log('')

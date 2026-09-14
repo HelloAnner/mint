@@ -87,6 +87,7 @@ export async function renderChart(request: RenderRequest): Promise<RenderResult>
     theme: nivoTheme,
     colors: [...palette.colors],
     fontFamily: font.family,
+    background: tokens.background,
     foreground: tokens.foreground,
     muted: tokens.muted,
   })

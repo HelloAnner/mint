@@ -27,7 +27,9 @@ function renderChartsDoc(): string {
   const lines: string[] = []
   lines.push('# mint 图表目录')
   lines.push('')
-  lines.push(`共 ${CHARTS.length} 种图表，全部基于 nivo 0.99，均随 mint 一起安装了端到端渲染测试。`)
+  lines.push(`共 ${CHARTS.length} 种图表，均随 mint 一起安装了端到端渲染测试。`)
+  lines.push('')
+  lines.push('除 `architecture`（架构图，mint 自绘 SVG）外，其余图表都基于 nivo 0.99 渲染。')
   lines.push('')
   lines.push('用 `mint info <id>` 查看某张图的完整选项与可运行示例。')
   lines.push('')

@@ -20,6 +20,7 @@ import radialBar from './radial-bar'
 import bullet from './bullet'
 import marimekko from './marimekko'
 import parallelCoordinates from './parallel-coordinates'
+import architecture from './architecture'
 
 /** 所有内置图表。顺序即 mint list 的展示顺序。 */
 export const CHARTS: readonly ChartDefinition[] = [
@@ -43,4 +44,5 @@ export const CHARTS: readonly ChartDefinition[] = [
   bullet,
   marimekko,
   parallelCoordinates,
+  architecture,
 ]

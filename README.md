@@ -6,8 +6,9 @@
 mint render bar --data revenue.json --title "各区域季度营收" --subtitle "单位：百万元" -o revenue.png
 ```
 
-mint 是给 AI 和工程师用的图表 CLI：内置 20 种经过端到端测试的图表、7 套调色板、明暗两套主题，
-中文标签开箱可用。所有图表由 [nivo](https://github.com/plouc/nivo) 在服务端渲染成 SVG，
+mint 是给 AI 和工程师用的图表 CLI：内置 21 种经过端到端测试的图表、7 套调色板、明暗两套主题，
+中文标签开箱可用。图表在服务端渲染成 SVG（绝大多数基于 [nivo](https://github.com/plouc/nivo)，
+分层架构图 `architecture` 为 mint 自绘），
 再由 [resvg](https://github.com/RazrFalcon/resvg) 光栅化为 PNG —— **不依赖浏览器**，单张图通常 100ms 内完成。
 
 [![CI](https://github.com/HelloAnner/mint/actions/workflows/ci.yml/badge.svg)](https://github.com/HelloAnner/mint/actions/workflows/ci.yml)
@@ -177,7 +178,7 @@ rm -f /tmp/mint-check.png
 ## 装好之后怎么用
 
 ```bash
-mint list                      # 20 种图表一览
+mint list                      # 21 种图表一览
 mint info bar                  # 某张图的数据结构、选项、可运行示例
 mint palettes                  # 7 套调色板
 mint render bar --data data.json --title "标题" -o out.png
@@ -245,8 +246,9 @@ rm -rf ~/.local/share/mint
 | [![柱状图](docs/images/bar.png)](docs/images/bar.png) | [![折线图](docs/images/line.png)](docs/images/line.png) |
 | [![环形图](docs/images/pie.png)](docs/images/pie.png) | [![矩形树图](docs/images/treemap.png)](docs/images/treemap.png) |
 | [![日历热力图](docs/images/calendar.png)](docs/images/calendar.png) | [![桑基图](docs/images/sankey.png)](docs/images/sankey.png) |
+| [![架构图](docs/images/architecture.png)](docs/images/architecture.png) | |
 
-想自己生成全部 20 张：`make examples`，产物在 `out/examples/`。
+想自己生成全部 21 张：`make examples`，产物在 `out/examples/`。
 
 ## 为什么是 mint
 
@@ -265,7 +267,7 @@ rm -rf ~/.local/share/mint
 | 比较 | `bar` 柱状图 · `radar` 雷达图 · `radial-bar` 径向条形图 · `bullet` 子弹图 |
 | 趋势 | `line` 折线图 · `stream` 堆叠面积图 · `bump` 排名变化图 |
 | 构成 | `pie` 环形/饼图 · `waffle` 华夫图 · `marimekko` 马赛克图 |
-| 关系 | `scatter` 散点/气泡图 · `parallel-coordinates` 平行坐标图 |
+| 关系 | `scatter` 散点/气泡图 · `parallel-coordinates` 平行坐标图 · `architecture` 分层架构图 |
 | 分布 | `heatmap` 热力图 · `calendar` 日历热力图 |
 | 层级 | `treemap` 矩形树图 · `sunburst` 旭日图 · `icicle` 冰柱图 · `circle-packing` 圆形打包图 |
 | 流向 | `funnel` 漏斗图 · `sankey` 桑基图 |
@@ -330,6 +332,8 @@ mint help                         打印帮助（也可用 --help / -h）
 { "name": "总计", "children": [{ "name": "华东", "value": 320 }] }   // 层级类
 [{ "path": "线上/华东/上海", "value": 120 }]           // 用 / 自动建树
 { "links": [{ "source": "搜索", "target": "注册", "value": 320 }] }  // 流向类
+{ "layers": [{ "name": "接入层", "nodes": [{ "id": "gateway", "label": "API 网关" }] }],
+  "edges": [{ "from": "web", "to": "gateway", "label": "HTTPS" }] }      // 架构类
 ```
 
 数据也可以从 stdin 传，这样连数据文件都不用落盘：
@@ -386,8 +390,9 @@ mint batch report.json
 ## 架构
 
 ```
-JSON 数据 ──▶ 数据归一化 ──▶ nivo 组件 ──▶ React SSR ──▶ SVG ──▶ 卡片排版 ──▶ resvg-wasm ──▶ PNG
-                helpers.ts      charts/*.tsx   render.ts           frame.ts     raster.ts
+JSON 数据 ──▶ 数据归一化 ──▶ 图表组件 ──▶ React SSR ──▶ SVG ──▶ 卡片排版 ──▶ resvg-wasm ──▶ PNG
+                helpers.ts   charts/*.tsx  render.ts           frame.ts     raster.ts
+图表组件绝大多数是 nivo 组件，architecture（架构图）是 mint 自绘的 SVG。
 ```
 
 关键设计取舍：
@@ -397,8 +402,8 @@ JSON 数据 ──▶ 数据归一化 ──▶ nivo 组件 ──▶ React SSR 
   所有图表统一传 `animate={false}`，避免 react-spring 在服务端留下初始态。
 - **resvg-wasm 而不是 sharp/canvas**：WASM 没有原生依赖，既方便本地安装，
   也能被 `bun build --compile` 直接打进单文件二进制。
-- **卡片排版在 SVG 层做**：nivo 只负责绘图区，标题、副标题、脚注、留白由 `frame.ts`
-  统一处理，因此 20 张图的排版规范完全一致。
+- **卡片排版在 SVG 层做**：图表组件只负责绘图区，标题、副标题、脚注、留白由 `frame.ts`
+  统一处理，因此所有图的排版规范完全一致。
 - **字体从系统探测**：resvg 不自带字体，mint 会按平台候选列表（PingFang / 冬青黑 /
   思源黑体 / 文泉驿…）挑一个支持中文的，找不到时回落到 fontconfig。
 
@@ -418,11 +423,11 @@ src/
     registry.ts          图表注册表
     skills.ts            skill 安装与自检
     spec.ts / output.ts  输入校验与输出路径
-  charts/                20 个图表定义
+  charts/                21 个图表定义
   generated/             由 scripts/embed.ts 生成（内嵌文件清单）
 skills/mint/             skill 内容（SKILL.md + references）
 scripts/                 embed（生成文档与内嵌清单）、build（编译）、examples
-tests/                   57 项测试，含每张图的端到端渲染
+tests/                   63 项测试，含每张图的端到端渲染
 .github/workflows/       ci.yml（类型检查 / 测试 / 构建）、release.yml（多平台发布）
 docs/images/             README 用的预览图
 install.sh               curl 一键安装脚本

@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { legendItemWidth } from '../src/charts/common'
+import { normalizeArchitecture } from '../src/charts/architecture'
 import { runRender } from '../src/commands/render'
 import { MintError } from '../src/core/errors'
 import { asGraph, asHierarchy, asPairs, asSeries, inferIndexKeys } from '../src/charts/helpers'
@@ -69,6 +70,33 @@ describe('数据归一化', () => {
     ])
     expect(indexBy).toBe('quarter')
     expect(keys).toEqual(['华东', '华北'])
+  })
+  test('架构图支持 layers 数组与按 layer 字段自动分层两种写法', () => {
+    const byLayers = normalizeArchitecture({
+      layers: [
+        { name: '接入层', nodes: ['网关'] },
+        { name: '服务层', nodes: [{ id: 'svc', label: '订单服务' }] },
+      ],
+      edges: [{ from: '网关', to: 'svc' }],
+    })
+    expect(byLayers.layers.map((l) => l.name)).toEqual(['接入层', '服务层'])
+    expect(byLayers.layers[1]!.nodes[0]!.label).toBe('订单服务')
+
+    const byGroup = normalizeArchitecture({
+      nodes: [
+        { id: 'a', label: 'A', group: '第一层' },
+        { id: 'b', label: 'B', group: '第二层' },
+        { id: 'c', label: 'C', group: '第一层' },
+      ],
+    })
+    expect(byGroup.layers.map((l) => l.name)).toEqual(['第一层', '第二层'])
+    expect(byGroup.layers.map((l) => l.nodes.length)).toEqual([2, 1])
+  })
+
+  test('架构图连线指向不存在的节点会报错', () => {
+    expect(() =>
+      normalizeArchitecture({ nodes: [{ id: 'a' }], edges: [{ from: 'a', to: 'ghost' }] }),
+    ).toThrow(/不是已定义的节点/)
   })
 })
 

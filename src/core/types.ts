@@ -47,6 +47,8 @@ export interface RenderContext<O = Record<string, unknown>> {
   colors: string[]
   /** 字体族名 */
   fontFamily: string
+  /** 主题对应的背景色 */
+  background: string
   /** 主题对应的前景色 */
   foreground: string
   /** 主题对应的次要文字色 */
@@ -65,8 +67,8 @@ export interface ChartDefinition<O = any> {
   description: string
   /** 数据结构说明，给人和 AI 看 */
   dataShape: string
-  /** nivo 包名 */
-  nivoPackage: string
+  /** nivo 包名；由 mint 自绘的图表没有这一项 */
+  nivoPackage?: string
   /** 变体说明，如 grouped / stacked */
   variants?: readonly string[]
   /** 别名，便于模糊匹配 */

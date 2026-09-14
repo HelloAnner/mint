@@ -1,13 +1,13 @@
 ---
 name: mint
-description: 把数据变成美观的图表图片。当用户说"画个图""生成图表""做成柱状图/折线图/饼图""把这份数据可视化""给报告配张图""生成图表 PNG"时使用。通过 mint CLI 把 JSON/CSV 数据渲染成 PNG 或 SVG，内置 20 种经过测试的 nivo 图表、7 套调色板与明暗两套主题，支持中文标签。核心命令是 `mint render <chart> --data data.json -o out.png`；不确定用哪种图表时先 `mint list`，需要数据结构说明时用 `mint info <chart>`。
+description: 把数据变成美观的图表图片。当用户说"画个图""生成图表""做成柱状图/折线图/饼图""把这份数据可视化""给报告配张图""生成图表 PNG"时使用。通过 mint CLI 把 JSON/CSV 数据渲染成 PNG 或 SVG，内置 21 种经过测试的图表（含分层架构图）、7 套调色板与明暗两套主题，支持中文标签。核心命令是 `mint render <chart> --data data.json -o out.png`；不确定用哪种图表时先 `mint list`，需要数据结构说明时用 `mint info <chart>`。
 ---
 
 # Mint — 数据到图表的 CLI
 
 mint 把一份 JSON 数据渲染成一张带标题、副标题、脚注的成品图表（PNG 或 SVG）。
-所有图表由 nivo（React 生态最成熟的图表库）在服务端渲染成 SVG，再由 resvg 光栅化为 PNG，
-不依赖浏览器，单张图通常 100ms 内完成。
+图表在服务端渲染成 SVG（绝大多数基于 nivo，`architecture` 架构图由 mint 自绘），
+再由 resvg 光栅化为 PNG，不依赖浏览器，单张图通常 100ms 内完成。
 
 ## 核心原则
 
@@ -170,6 +170,10 @@ mint batch "$tmp/report.json"     # out 指向真实交付目录，输入留在 
 
 // 流向类
 { "links": [{ "source": "搜索", "target": "注册", "value": 320 }] }  // → sankey
+
+// 架构类：层 + 方块 + 箭头
+{ "layers": [{ "name": "接入层", "nodes": [{ "id": "gateway", "label": "API 网关" }] }],
+  "edges": [{ "from": "web", "to": "gateway" }] }                      // → architecture
 ```
 
 数据是 CSV 时，先用任意方式转成 JSON 数组再喂给 mint。
@@ -190,6 +194,7 @@ mint batch "$tmp/report.json"     # out 指向真实交付目录，输入留在 
 | 名次此消彼长 | `bump` | `--set variant=area` 换面积式 |
 | 多项 KPI 达成 | `bullet` | 实际值/目标值/区间一体 |
 | 多维度对照 | `radar` / `parallel-coordinates` | 维度 ≤ 8 用雷达 |
+| 系统/服务架构 | `architecture` | 分层方块 + 依赖箭头，`--set direction=horizontal` 可横排 |
 
 完整的图表清单与每张图的适用/不适用场景见 [references/charts.md](references/charts.md)。
 

@@ -21,7 +21,8 @@ describe('图表注册表', () => {
       expect(chart.englishName.length).toBeGreaterThan(0)
       expect(chart.description.length).toBeGreaterThan(0)
       expect(chart.dataShape.length).toBeGreaterThan(0)
-      expect(chart.nivoPackage).toMatch(/^@nivo\//)
+      // 自绘图表（如架构图）没有 nivo 包，有就必须写对
+      if (chart.nivoPackage) expect(chart.nivoPackage).toMatch(/^@nivo\//)
       expect(chart.example.data).toBeDefined()
     }
   })
@@ -139,3 +140,69 @@ describe('图表内容不塌陷', () => {
     expect(result.svg).toContain('老客')
   })
 })
+/**
+ * 架构图是唯一一张 mint 自绘 SVG 的图表，单独盯住「层、方块、箭头都真的画出来了」。
+ */
+describe('架构图', () => {
+  const chart = charts.find((c) => c.id === 'architecture')!
+  const example = chart.example.data as { layers: { nodes: unknown[] }[]; edges: unknown[] }
+  const nodeCount = example.layers.reduce((sum, layer) => sum + layer.nodes.length, 0)
+
+  test('层名、方块标题、说明小字与箭头都出现在 SVG 里', async () => {
+    const result = await renderChart({
+      definition: chart,
+      data: chart.example.data,
+      title: chart.name,
+      width: 1000,
+      height: 700,
+      scale: 1,
+      theme: 'light',
+      palette: 'mint',
+      format: 'svg',
+    })
+    expect(result.svg).toContain('客户端')
+    expect(result.svg).toContain('API 网关')
+    expect(result.svg).toContain('鉴权 · 限流')
+    // 每个节点至少一个 rect，每条连线一个箭头 polygon
+    expect((result.svg.match(/<rect/g) ?? []).length).toBeGreaterThanOrEqual(nodeCount)
+    expect((result.svg.match(/<polygon/g) ?? []).length).toBe(example.edges.length)
+  })
+
+  test('nodes + layer 字段能自动分层', async () => {
+    const result = await renderChart({
+      definition: chart,
+      data: {
+        nodes: [
+          { id: 'a', label: '前端', layer: '客户端' },
+          { id: 'b', label: '后端', layer: '服务端' },
+        ],
+        edges: [{ from: 'a', to: 'b' }],
+      },
+      width: 800,
+      height: 600,
+      scale: 1,
+      theme: 'dark',
+      palette: 'ocean',
+      format: 'svg',
+    })
+    expect(result.svg).toContain('客户端')
+    expect(result.svg).toContain('服务端')
+    expect(result.svg).toContain('前端')
+  })
+
+  test('横向分层与折线连线也能渲染', async () => {
+    const result = await renderChart({
+      definition: chart,
+      data: chart.example.data,
+      options: { direction: 'horizontal', edgeStyle: 'elbow' },
+      width: 1000,
+      height: 640,
+      scale: 1,
+      theme: 'light',
+      palette: 'indigo',
+      format: 'png',
+    })
+    expect(result.png!.byteLength).toBeGreaterThan(1500)
+  })
+})
+

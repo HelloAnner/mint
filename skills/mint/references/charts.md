@@ -1,6 +1,8 @@
 # mint 图表目录
 
-共 20 种图表，全部基于 nivo 0.99，均随 mint 一起安装了端到端渲染测试。
+共 21 种图表，均随 mint 一起安装了端到端渲染测试。
+
+除 `architecture`（架构图，mint 自绘 SVG）外，其余图表都基于 nivo 0.99 渲染。
 
 用 `mint info <id>` 查看某张图的完整选项与可运行示例。
 
@@ -11,7 +13,7 @@
 | 比较 | `bar` · `radar` · `radial-bar` · `bullet` |
 | 趋势 | `line` · `stream` · `bump` |
 | 构成 | `pie` · `waffle` · `marimekko` |
-| 关系 | `scatter` · `parallel-coordinates` |
+| 关系 | `scatter` · `parallel-coordinates` · `architecture` |
 | 分布 | `heatmap` · `calendar` |
 | 层级 | `treemap` · `sunburst` · `icicle` · `circle-packing` |
 | 流向 | `funnel` · `sankey` |
@@ -461,6 +463,52 @@ value 决定该组的宽度，其余数值字段构成组内的堆叠，会自�
 | `valueSuffix` | string | — | 数值后缀，如 万 |
 
 **别名**：平行坐标、parallel、多维图
+
+### `architecture` — 架构图（Architecture Diagram）
+
+把系统画成分层方块图：层是横向的带子，方块是组件，箭头表示组件之间的调用或依赖。
+
+**形态**：vertical 纵向分层 / horizontal 横向分层
+
+**数据结构**
+
+```
+{
+  "layers": [
+    { "name": "客户端", "nodes": [{ "id": "web", "label": "Web 控制台", "description": "React SPA" }] },
+    { "name": "接入层", "nodes": [{ "id": "gateway", "label": "API 网关" }] }
+  ],
+  "edges": [{ "from": "web", "to": "gateway", "label": "HTTPS" }]
+}
+nodes 里的每一项可以是字符串（id 即名称）或对象；对象支持 label 显示名、description 小字说明。
+layers 也可以写成 { "接入层": [...], "服务层": [...] }；
+或者省略 layers，直接给 nodes，用每个节点的 layer / group 字段自动分层。
+edges 支持 from/to（也可写 source/target），label 是连线上的小标签。
+```
+
+**最小示例**：`mint render architecture -o architecture.png`（不传 --data 时用内置示例数据）
+
+**专属选项**
+
+| 选项 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `direction` | string | `"vertical"` | 分层方向：纵向从上到下，横向从左到右（vertical / horizontal） |
+| `edgeStyle` | string | `"curve"` | 连线样式（curve / straight / elbow） |
+| `showLayers` | boolean | `true` | 是否显示层名的底衬色带 |
+| `showDescriptions` | boolean | `true` | 是否显示方块里的小字说明 |
+| `edgeLabels` | boolean | `true` | 是否显示连线上的标签 |
+| `nodeGap` | number | `26` | 同一层内方块的间距 |
+| `layerGap` | number | `36` | 层与层之间的间距 |
+| `detourGap` | number | `30` | 同层连线需要绕过中间方块时向外绕行的距离，0 表示不绕行 |
+| `minNodeWidth` | number | `128` | 方块最小宽度 |
+| `maxNodeWidth` | number | `260` | 方块最大宽度，超出用省略号截断 |
+| `labelSize` | number | `15` | 方块主标题字号 |
+| `descriptionSize` | number | `12` | 方块说明文字号 |
+| `edgeLabelSize` | number | `11` | 连线标签字号 |
+| `lineWidth` | number | `1.6` | 连线粗细 |
+| `cornerRadius` | number | `10` | 方块圆角半径 |
+
+**别名**：架构图、系统架构图、架构、architecture、arch、topology、拓扑图、部署图
 
 ## 分布
 
