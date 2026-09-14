@@ -21,6 +21,8 @@ import bullet from './bullet'
 import marimekko from './marimekko'
 import parallelCoordinates from './parallel-coordinates'
 import architecture from './architecture'
+import flowchart from './flowchart'
+import sequence from './sequence'
 
 /** 所有内置图表。顺序即 mint list 的展示顺序。 */
 export const CHARTS: readonly ChartDefinition[] = [
@@ -45,4 +47,6 @@ export const CHARTS: readonly ChartDefinition[] = [
   marimekko,
   parallelCoordinates,
   architecture,
+  flowchart,
+  sequence,
 ]

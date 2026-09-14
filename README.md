@@ -6,9 +6,9 @@
 mint render bar --data revenue.json --title "各区域季度营收" --subtitle "单位：百万元" -o revenue.png
 ```
 
-mint 是给 AI 和工程师用的图表 CLI：内置 21 种经过端到端测试的图表、7 套调色板、明暗两套主题，
+mint 是给 AI 和工程师用的图表 CLI：内置 23 种经过端到端测试的图表、7 套调色板、明暗两套主题，
 中文标签开箱可用。图表在服务端渲染成 SVG（绝大多数基于 [nivo](https://github.com/plouc/nivo)，
-分层架构图 `architecture` 为 mint 自绘），
+架构图 `architecture`、流程图 `flowchart`、时序图 `sequence` 为 mint 自绘），
 再由 [resvg](https://github.com/RazrFalcon/resvg) 光栅化为 PNG —— **不依赖浏览器**，单张图通常 100ms 内完成。
 
 [![CI](https://github.com/HelloAnner/mint/actions/workflows/ci.yml/badge.svg)](https://github.com/HelloAnner/mint/actions/workflows/ci.yml)
@@ -178,7 +178,7 @@ rm -f /tmp/mint-check.png
 ## 装好之后怎么用
 
 ```bash
-mint list                      # 21 种图表一览
+mint list                      # 23 种图表一览
 mint info bar                  # 某张图的数据结构、选项、可运行示例
 mint palettes                  # 7 套调色板
 mint render bar --data data.json --title "标题" -o out.png
@@ -246,9 +246,10 @@ rm -rf ~/.local/share/mint
 | [![柱状图](docs/images/bar.png)](docs/images/bar.png) | [![折线图](docs/images/line.png)](docs/images/line.png) |
 | [![环形图](docs/images/pie.png)](docs/images/pie.png) | [![矩形树图](docs/images/treemap.png)](docs/images/treemap.png) |
 | [![日历热力图](docs/images/calendar.png)](docs/images/calendar.png) | [![桑基图](docs/images/sankey.png)](docs/images/sankey.png) |
-| [![架构图](docs/images/architecture.png)](docs/images/architecture.png) | |
+| [![架构图](docs/images/architecture.png)](docs/images/architecture.png) | [![流程图](docs/images/flowchart.png)](docs/images/flowchart.png) |
+| [![时序图](docs/images/sequence.png)](docs/images/sequence.png) | |
 
-想自己生成全部 21 张：`make examples`，产物在 `out/examples/`。
+想自己生成全部 23 张：`make examples`，产物在 `out/examples/`。
 
 ## 为什么是 mint
 
@@ -270,7 +271,7 @@ rm -rf ~/.local/share/mint
 | 关系 | `scatter` 散点/气泡图 · `parallel-coordinates` 平行坐标图 · `architecture` 分层架构图 |
 | 分布 | `heatmap` 热力图 · `calendar` 日历热力图 |
 | 层级 | `treemap` 矩形树图 · `sunburst` 旭日图 · `icicle` 冰柱图 · `circle-packing` 圆形打包图 |
-| 流向 | `funnel` 漏斗图 · `sankey` 桑基图 |
+| 流向 | `funnel` 漏斗图 · `sankey` 桑基图 · `flowchart` 流程图 · `sequence` 时序图 |
 
 每张图还支持多种形态（`bar` 支持分组/堆叠/横向，`pie` 支持实心/环形，`bump` 支持折线/面积）。
 完整清单与数据结构见 [skills/mint/references/charts.md](skills/mint/references/charts.md)，
@@ -392,7 +393,7 @@ mint batch report.json
 ```
 JSON 数据 ──▶ 数据归一化 ──▶ 图表组件 ──▶ React SSR ──▶ SVG ──▶ 卡片排版 ──▶ resvg-wasm ──▶ PNG
                 helpers.ts   charts/*.tsx  render.ts           frame.ts     raster.ts
-图表组件绝大多数是 nivo 组件，architecture（架构图）是 mint 自绘的 SVG。
+图表组件绝大多数是 nivo 组件，architecture（架构图）、flowchart（流程图）、sequence（时序图）是 mint 自绘的 SVG。
 ```
 
 关键设计取舍：

@@ -206,3 +206,57 @@ describe('架构图', () => {
   })
 })
 
+/**
+ * 流程图 / 时序图也是 mint 自绘 SVG，同样盯住「节点、连线、箭头都真的画出来了」。
+ */
+describe('流程图与时序图', () => {
+  test('流程图画出全部节点、边与箭头', async () => {
+    const chart = charts.find((c) => c.id === 'flowchart')!
+    const example = chart.example.data as { nodes: unknown[]; edges: unknown[] }
+    const result = await renderChart({
+      definition: chart,
+      data: chart.example.data,
+      options: chart.example.options,
+      width: 1000,
+      height: 700,
+      scale: 1,
+      theme: 'light',
+      palette: 'mint',
+      format: 'svg',
+    })
+    // 每个节点一个主体（rect 或 polygon 菱形），每条边一个 path + 一个箭头 polygon
+    expect((result.svg.match(/<rect/g) ?? []).length).toBeGreaterThanOrEqual(
+      example.nodes.length,
+    )
+    expect((result.svg.match(/<path/g) ?? []).length).toBeGreaterThanOrEqual(example.edges.length)
+    expect((result.svg.match(/<polygon/g) ?? []).length).toBeGreaterThanOrEqual(example.edges.length)
+    expect(result.svg).toContain('库存充足？')
+  })
+
+  test('时序图画出参与者、生命线与消息箭头', async () => {
+    const chart = charts.find((c) => c.id === 'sequence')!
+    const example = chart.example.data as { participants: unknown[]; messages: unknown[] }
+    const result = await renderChart({
+      definition: chart,
+      data: chart.example.data,
+      options: chart.example.options,
+      width: 1000,
+      height: 700,
+      scale: 1,
+      theme: 'light',
+      palette: 'mint',
+      format: 'svg',
+    })
+    // 参与者头部 + 备注框是 rect，生命线是虚线 line，消息箭头是 polygon/polyline
+    expect((result.svg.match(/<rect/g) ?? []).length).toBeGreaterThanOrEqual(
+      (example.participants as unknown[]).length,
+    )
+    expect((result.svg.match(/stroke-dasharray/g) ?? []).length).toBeGreaterThanOrEqual(
+      (example.participants as unknown[]).length,
+    )
+    expect((result.svg.match(/<polygon|<polyline/g) ?? []).length).toBeGreaterThanOrEqual(
+      (example.messages as unknown[]).length,
+    )
+    expect(result.svg).toContain('提交订单')
+  })
+})

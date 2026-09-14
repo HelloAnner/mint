@@ -1,6 +1,16 @@
 import type { ChartDefinition } from '../core/types'
 import { fail } from '../core/errors'
 import { isPlainObject } from './helpers'
+import {
+  arrowPoints,
+  bezierMid,
+  ellipsize,
+  isDarkBackground,
+  midpoint,
+  round,
+  textWidth,
+  type Point,
+} from './diagram-utils'
 
 /* ─────────────────────────── 数据归一化 ─────────────────────────── */
 
@@ -157,11 +167,6 @@ export function normalizeArchitecture(data: unknown): ArchitectureDiagram {
 
 /* ─────────────────────────── 排版度量 ─────────────────────────── */
 
-interface Point {
-  x: number
-  y: number
-}
-
 interface NodeBox {
   node: ArchNode
   layer: number
@@ -207,27 +212,6 @@ interface LayoutConfig {
 const NODE = { padX: 18, padY: 12, descGap: 4, lineRatio: 1.28 }
 const BAND = { padX: 16, padTop: 12, padBottom: 14 }
 const LAYER_TITLE = { size: 12.5, gap: 10 }
-
-/** 按字符宽度估算文本宽度：CJK 约 1em/字，ASCII 约 0.56em/字，和 legendItemWidth 的口径一致。 */
-export function textWidth(text: string, fontSize: number): number {
-  let width = 0
-  for (const ch of text) {
-    if (/[\u2E80-\uFFFF]/.test(ch)) width += fontSize
-    else if (ch === ' ') width += fontSize * 0.3
-    else width += fontSize * 0.56
-  }
-  return width
-}
-
-function ellipsize(text: string, maxWidth: number, fontSize: number): string {
-  if (textWidth(text, fontSize) <= maxWidth) return text
-  let out = ''
-  for (const ch of text) {
-    if (textWidth(out + ch + '…', fontSize) > maxWidth) break
-    out += ch
-  }
-  return out === '' ? '…' : out + '…'
-}
 
 function measureNode(node: ArchNode, cfg: LayoutConfig) {
   const maxText = Math.max(40, cfg.maxNodeWidth - NODE.padX * 2)
@@ -354,10 +338,6 @@ function layoutDiagram(diagram: ArchitectureDiagram, cfg: LayoutConfig): Layout 
 
 /* ─────────────────────────── 连线几何 ─────────────────────────── */
 
-function round(value: number): number {
-  return Math.round(value * 10) / 10
-}
-
 function centerOf(box: NodeBox): Point {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
@@ -386,34 +366,6 @@ function anchors(a: NodeBox, b: NodeBox, direction: Direction): { from: Point; t
   return cb.x > ca.x
     ? { from: { x: a.x + a.width, y: ca.y }, to: { x: b.x, y: cb.y } }
     : { from: { x: a.x, y: ca.y }, to: { x: b.x + b.width, y: cb.y } }
-}
-
-function midpoint(a: Point, b: Point): Point {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
-}
-
-/** 三次贝塞尔在 t=0.5 处的点，用来把标签压在曲线正中间。 */
-function bezierMid(p0: Point, p1: Point, p2: Point, p3: Point): Point {
-  return {
-    x: (p0.x + 3 * p1.x + 3 * p2.x + p3.x) / 8,
-    y: (p0.y + 3 * p1.y + 3 * p2.y + p3.y) / 8,
-  }
-}
-
-/**
- * 箭头直接用多边形画，不用 <marker>：resvg 对 marker 的支持有边界，
- * 自算三角形可以保证光栅化结果和浏览器里一致。
- */
-function arrowPoints(tip: Point, dir: Point, size: number): string {
-  const length = Math.hypot(dir.x, dir.y) || 1
-  const ux = dir.x / length
-  const uy = dir.y / length
-  const baseX = tip.x - ux * size
-  const baseY = tip.y - uy * size
-  const half = size * 0.46
-  const nx = -uy * half
-  const ny = ux * half
-  return `${round(tip.x)},${round(tip.y)} ${round(baseX + nx)},${round(baseY + ny)} ${round(baseX - nx)},${round(baseY - ny)}`
 }
 
 /** 同层两块之间是否夹着第三个方块：夹着就不能直连，需要绕行。 */
@@ -550,17 +502,6 @@ function edgeGeometry(
 }
 
 /* ─────────────────────────── 主题适配 ─────────────────────────── */
-
-/** 由背景色亮度判断深浅，决定方块填充的透明度。 */
-function isDarkBackground(color: string): boolean {
-  const hex = color.replace('#', '')
-  const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex
-  if (full.length < 6) return false
-  const r = parseInt(full.slice(0, 2), 16)
-  const g = parseInt(full.slice(2, 4), 16)
-  const b = parseInt(full.slice(4, 6), 16)
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5
-}
 
 /* ─────────────────────────── 图表定义 ─────────────────────────── */
 

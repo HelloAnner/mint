@@ -1,6 +1,6 @@
 ---
 name: mint
-description: 把数据变成美观的图表图片。当用户说"画个图""生成图表""做成柱状图/折线图/饼图""把这份数据可视化""给报告配张图""生成图表 PNG"时使用。通过 mint CLI 把 JSON/CSV 数据渲染成 PNG 或 SVG，内置 21 种经过测试的图表（含分层架构图）、7 套调色板与明暗两套主题，支持中文标签。核心命令是 `mint render <chart> --data data.json -o out.png`；不确定用哪种图表时先 `mint list`，需要数据结构说明时用 `mint info <chart>`。
+description: 把数据变成美观的图表图片。当用户说"画个图""生成图表""做成柱状图/折线图/饼图""把这份数据可视化""给报告配张图""生成图表 PNG"时使用。通过 mint CLI 把 JSON/CSV 数据渲染成 PNG 或 SVG，内置 23 种经过测试的图表（含架构图、流程图、时序图）、7 套调色板与明暗两套主题，支持中文标签。核心命令是 `mint render <chart> --data data.json -o out.png`；不确定用哪种图表时先 `mint list`，需要数据结构说明时用 `mint info <chart>`。
 ---
 
 # Mint — 数据到图表的 CLI

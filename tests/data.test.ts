@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { legendItemWidth } from '../src/charts/common'
 import { normalizeArchitecture } from '../src/charts/architecture'
+import { normalizeFlowchart } from '../src/charts/flowchart'
+import { normalizeSequence } from '../src/charts/sequence'
 import { runRender } from '../src/commands/render'
 import { MintError } from '../src/core/errors'
 import { asGraph, asHierarchy, asPairs, asSeries, inferIndexKeys } from '../src/charts/helpers'
@@ -174,5 +176,62 @@ describe('图表别名', () => {
     expect(requireChart('柱状图').id).toBe('bar')
     expect(requireChart('饼图').id).toBe('pie')
     expect(requireChart('折线').id).toBe('line')
+  })
+})
+
+describe('流程图数据归一化', () => {
+  test('字符串节点与形状别名', () => {
+    const graph = normalizeFlowchart({
+      nodes: ['开始', { id: 'check', label: '通过？', shape: 'decision' }],
+      edges: [{ from: '开始', to: 'check', label: '是' }],
+    })
+    expect(graph.nodes[0]).toEqual({ id: '开始', label: '开始', shape: 'rect' })
+    expect(graph.nodes[1]!.shape).toBe('diamond')
+    expect(graph.edges[0]).toEqual({ from: '开始', to: 'check', label: '是' })
+  })
+
+  test('成环时识别出回流边且不丢节点', () => {
+    const graph = normalizeFlowchart({
+      nodes: ['a', 'b'],
+      edges: [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'a' },
+      ],
+    })
+    expect(graph.nodes).toHaveLength(2)
+    expect(graph.edges).toHaveLength(2)
+  })
+
+  test('连线指向未知节点会报错', () => {
+    expect(() =>
+      normalizeFlowchart({ nodes: ['a'], edges: [{ from: 'a', to: 'ghost' }] }),
+    ).toThrow()
+  })
+})
+
+describe('时序图数据归一化', () => {
+  test('省略 participants 时按消息推导', () => {
+    const diagram = normalizeSequence({
+      messages: [
+        { from: '用户', to: '服务', label: '请求' },
+        { from: '服务', to: '用户', label: '响应', type: 'return' },
+      ],
+    })
+    expect(diagram.participants.map((p) => p.id)).toEqual(['用户', '服务'])
+    expect(diagram.messages[1]!.type).toBe('dashed')
+  })
+
+  test('参与者支持字符串简写与备注', () => {
+    const diagram = normalizeSequence({
+      participants: ['网关'],
+      messages: [{ from: '网关', to: '网关', label: '自检' }],
+      notes: [{ from: '网关', label: '每 30 秒' }],
+    })
+    expect(diagram.participants).toEqual([{ id: '网关', label: '网关' }])
+    expect(diagram.notes).toHaveLength(1)
+  })
+
+  test('缺少 from/to 的消息会报错', () => {
+    expect(() => normalizeSequence({ messages: [{ from: 'a' }] })).toThrow()
   })
 })

@@ -1,6 +1,6 @@
 # mint 图表目录
 
-共 21 种图表，均随 mint 一起安装了端到端渲染测试。
+共 23 种图表，均随 mint 一起安装了端到端渲染测试。
 
 除 `architecture`（架构图，mint 自绘 SVG）外，其余图表都基于 nivo 0.99 渲染。
 
@@ -16,7 +16,7 @@
 | 关系 | `scatter` · `parallel-coordinates` · `architecture` |
 | 分布 | `heatmap` · `calendar` |
 | 层级 | `treemap` · `sunburst` · `icicle` · `circle-packing` |
-| 流向 | `funnel` · `sankey` |
+| 流向 | `funnel` · `sankey` · `flowchart` · `sequence` |
 
 ## 比较
 
@@ -784,6 +784,100 @@ source/target 也支持写成 from/to，value 支持写成 weight。
 | `valueSuffix` | string | — | 数值后缀，如 万 |
 
 **别名**：桑基图、sankey、流向图、流量图
+
+### `flowchart` — 流程图（Flowchart）
+
+用节点和有向连线表达流程与判断：矩形是步骤，菱形是判断，圆角胶囊是开始/结束。
+
+**形态**：vertical 从上到下 / horizontal 从左到右
+
+**数据结构**
+
+```
+{
+  "nodes": [
+    { "id": "start", "label": "开始", "shape": "stadium" },
+    { "id": "check", "label": "库存充足？", "shape": "diamond" },
+    { "id": "pay", "label": "创建订单" },
+    { "id": "end", "label": "结束", "shape": "stadium" }
+  ],
+  "edges": [
+    { "from": "start", "to": "check" },
+    { "from": "check", "to": "pay", "label": "是" },
+    { "from": "pay", "to": "end" },
+    { "from": "check", "to": "end", "label": "否" }
+  ]
+}
+shape：rect（默认，步骤）/ round（圆角）/ stadium（开始结束）/ diamond（判断）。
+edges 支持 from/to（也可写 source/target）与 label（连线上的分支说明）。
+画不下的回流边（如循环）会自动绕到最外侧通道，不会穿过节点。
+```
+
+**最小示例**：`mint render flowchart -o flowchart.png`（不传 --data 时用内置示例数据）
+
+**专属选项**
+
+| 选项 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `direction` | string | `"vertical"` | 流程方向（vertical / horizontal） |
+| `edgeStyle` | string | `"elbow"` | 连线样式（elbow / curve / straight） |
+| `edgeLabels` | boolean | `true` | 是否显示连线上的标签 |
+| `nodeGap` | number | `30` | 同层节点的间距 |
+| `layerGap` | number | `74` | 层与层之间的间距 |
+| `minNodeWidth` | number | `120` | 节点最小宽度 |
+| `maxNodeWidth` | number | `240` | 节点最大宽度，超出用省略号截断 |
+| `labelSize` | number | `14` | 节点文字字号 |
+| `edgeLabelSize` | number | `11` | 连线标签字号 |
+| `lineWidth` | number | `1.6` | 连线粗细 |
+
+**别名**：流程图、flowchart、flow、流程、业务流程、uml图
+
+### `sequence` — 时序图（Sequence Diagram）
+
+按时间顺序展示对象之间的消息往来：实线是调用，虚线是返回，常用于接口与交互文档。
+
+**形态**：sequence 时序
+
+**数据结构**
+
+```
+{
+  "participants": [
+    { "id": "user", "label": "用户" },
+    { "id": "app", "label": "App" },
+    { "id": "api", "label": "订单服务" },
+    { "id": "db", "label": "数据库" }
+  ],
+  "messages": [
+    { "from": "user", "to": "app", "label": "提交订单" },
+    { "from": "app", "to": "api", "label": "POST /orders" },
+    { "from": "api", "to": "db", "label": "INSERT orders" },
+    { "from": "db", "to": "api", "label": "订单 ID", "type": "dashed" },
+    { "from": "api", "to": "app", "label": "201 Created", "type": "dashed" },
+    { "from": "app", "to": "user", "label": "下单成功", "type": "dashed" }
+  ],
+  "notes": [
+    { "from": "api", "to": "db", "label": "同事务内写入" }
+  ]
+}
+participants 可以省略，按 messages 里首次出现的顺序自动推导。
+type 为 dashed（或 return / reply）时画虚线返回箭头；发给自己的小消息画自环。
+notes 的 from/to 决定备注横跨的生命线范围。
+```
+
+**最小示例**：`mint render sequence -o sequence.png`（不传 --data 时用内置示例数据）
+
+**专属选项**
+
+| 选项 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `number` | boolean | `false` | 是否给消息自动编号 |
+| `labelSize` | number | `13` | 消息文字字号 |
+| `noteSize` | number | `12` | 备注文字字号 |
+| `lifelineWidth` | number | `1` | 生命线粗细 |
+| `lineWidth` | number | `1.6` | 消息箭头粗细 |
+
+**别名**：时序图、sequence、顺序图、序列图、时序、交互图、uml时序、sequence diagram
 
 ## 调色板
 
