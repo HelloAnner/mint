@@ -14,7 +14,7 @@ for (const chart of CHARTS) {
     footnote: 'mint · 示例数据',
     width: 1000,
     height: 620,
-    scale: 1,
+    scale: 2,
     theme: 'light',
     palette: 'mint',
     format: 'png',
