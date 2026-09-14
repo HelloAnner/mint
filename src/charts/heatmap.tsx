@@ -107,7 +107,7 @@ const heatmap: ChartDefinition = {
         margin={{
           top: topMargin(legend),
           right: 26,
-          bottom: ctx.options.xLegend ? 62 : 48,
+          bottom: 40,
           left: ctx.options.yLegend ? 84 : 68,
         }}
         valueFormat={format}
@@ -120,15 +120,11 @@ const heatmap: ChartDefinition = {
           tickPadding: 10,
           legend: ctx.options.xLegend,
           legendPosition: 'middle',
+          legendOffset: -28,
         }}
         axisRight={null}
-        axisBottom={{
-          tickSize: 0,
-          tickPadding: 10,
-          legend: ctx.options.xLegend,
-          legendPosition: 'middle',
-          legendOffset: 40,
-        }}
+        // 列标签放在顶部即可，底部再画一份只会重复
+        axisBottom={null}
         axisLeft={{
           tickSize: 0,
           tickPadding: 10,

@@ -27,7 +27,7 @@ ranges 是背景区间（由小到大），measures 是实际值，markers 是�
   variants: ['bullet 子弹'],
   aliases: ['子弹图', 'bullet', 'kpi图', '目标对比'],
   options: [
-    { key: 'titleAlign', type: 'string', description: '标题对齐', default: 'start', values: ['start', 'middle', 'end'] },
+    { key: 'titleAlign', type: 'string', description: '标题对齐', default: 'end', values: ['start', 'middle', 'end'] },
     legendOption,
     ...formatOptions,
   ],
@@ -57,7 +57,10 @@ ranges 是背景区间（由小到大），measures 是实际值，markers 是�
         measureColors={[ctx.colors[0]!]}
         markerColors={[ctx.colors[3] ?? ctx.colors[0]!]}
         margin={{ top: 24, right: 60, bottom: 34, left: 120 }}
-        titleAlign={(ctx.options.titleAlign as never) ?? 'start'}
+        titleAlign={(ctx.options.titleAlign as never) ?? 'end'}
+        // 标题默认右对齐、收在条左侧的留白里；贴着条起点画会压进彩色条，
+        // 深色字在深底色上完全看不清
+        titleOffsetX={-12}
         spacing={18}
         animate={false}
         role="img"

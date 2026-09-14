@@ -51,9 +51,43 @@ source/target 也支持写成 from/to，value 支持写成 weight。`,
     const data = asGraph(ctx.data, 'sankey')
     const format = formatterFrom(ctx.options)
 
+    // 节点 id 换成 ASCII 别名再交给 nivo：中文 id 会被 nivo 用做渐变 id，
+    // 而 React 会对 fill="url(#中文)" 做 URL 编码，导致引用失配、流变成灰色。
+    // 原名保留在 label 上，图里看到的仍然是中文。
+    const ascii = new Map(data.nodes.map((node, i) => [String(node.id), `n${i}`]))
+    const nodes = data.nodes.map((node) => ({
+      id: ascii.get(String(node.id))!,
+      label: String(node.id),
+    }))
+
+    // nivo 按 nodes 的出现顺序分配调色板颜色，这里用同一套映射给每条流
+    // 标注 startColor / endColor，让流呈现「来源色 → 目标色」的渐变。
+    const nodeColor = new Map(data.nodes.map((node, i) => [String(node.id), ctx.colors[i % ctx.colors.length]!]))
+    const links = data.links.map((link) => {
+      const source = String(link.source)
+      const target = String(link.target)
+      return {
+        source: ascii.get(source)!,
+        target: ascii.get(target)!,
+        value: link.value,
+        startColor: nodeColor.get(source),
+        endColor: nodeColor.get(target),
+      }
+    })
+
+    // 亮色背景用 multiply 让流与底色交融；暗色背景下 multiply 会把流吞掉，
+    // 换成 screen 才能显出来。
+    const bgHex = ctx.background.replace('#', '')
+    const luminance =
+      (parseInt(bgHex.slice(0, 2), 16) * 0.299 +
+        parseInt(bgHex.slice(2, 4), 16) * 0.587 +
+        parseInt(bgHex.slice(4, 6), 16) * 0.114) /
+      255
+
     return (
       <Sankey
-        data={data as never}
+        data={{ nodes, links } as never}
+        label={((node: { label?: string; id: string }) => node.label ?? node.id) as never}
         width={ctx.width}
         height={ctx.height}
         theme={ctx.theme}
@@ -64,7 +98,8 @@ source/target 也支持写成 from/to，value 支持写成 weight。`,
         nodeSpacing={ctx.options.nodeSpacing ?? 18}
         nodeOpacity={1}
         nodeBorderWidth={0}
-        linkOpacity={ctx.options.linkOpacity ?? 0.28}
+        linkOpacity={ctx.options.linkOpacity ?? 0.3}
+        linkBlendMode={luminance < 0.5 ? 'screen' : 'multiply'}
         enableLinkGradient={ctx.options.gradient !== false}
         labelPosition="outside"
         labelPadding={14}

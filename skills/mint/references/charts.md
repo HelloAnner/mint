@@ -47,7 +47,7 @@
 | `layout` | string | `"vertical"` | 方向（vertical / horizontal） |
 | `indexBy` | string | — | 分类轴字段名 |
 | `keys` | array | — | 参与绘制的数值字段，逗号分隔 |
-| `borderRadius` | number | `4` | 柱子的圆角半径 |
+| `borderRadius` | number | `6` | 柱子的圆角半径 |
 | `valueLabel` | boolean | `true` | 是否在柱子上直接标数值 |
 | `legend` | boolean | `true` | 是否显示图例 |
 | `xLegend` | string | — | X 轴标题 |
@@ -84,7 +84,7 @@
 |------|------|------|------|
 | `indexBy` | string | — | 维度字段名 |
 | `keys` | array | — | 比较对象字段，逗号分隔 |
-| `fillOpacity` | number | `0.22` | 填充不透明度，0 为纯描边 |
+| `fillOpacity` | number | `0.15` | 填充不透明度，0 为纯描边 |
 | `gridLevels` | number | `5` | 网格层数 |
 | `legend` | boolean | `true` | 是否显示图例 |
 | `xLegend` | string | — | X 轴标题 |
@@ -158,7 +158,7 @@ ranges 是背景区间（由小到大），measures 是实际值，markers 是�
 
 | 选项 | 类型 | 默认 | 说明 |
 |------|------|------|------|
-| `titleAlign` | string | `"start"` | 标题对齐（start / middle / end） |
+| `titleAlign` | string | `"end"` | 标题对齐（start / middle / end） |
 | `legend` | boolean | `true` | 是否显示图例 |
 | `valueFormat` | string | `"number"` | 数值格式化方式（number / percent / compact） |
 | `decimals` | number | — | 小数位数，省略则用千分位整数 |
@@ -196,7 +196,7 @@ ranges 是背景区间（由小到大），measures 是实际值，markers 是�
 | `curve` | string | `"monotoneX"` | 曲线插值方式（linear / monotoneX / natural / step / stepAfter / basis / cardinal） |
 | `area` | boolean | `false` | 是否填充面积（面积图） |
 | `points` | boolean | `false` | 是否显示数据点 |
-| `lineWidth` | number | `2.6` | 线宽 |
+| `lineWidth` | number | `3` | 线宽 |
 | `seriesBy` | string | — | 扁平记录下用于分组的字段名 |
 | `xBy` | string | — | X 字段名，默认 x |
 | `yBy` | string | — | Y 字段名，默认 y |
@@ -418,7 +418,7 @@ value 决定该组的宽度，其余数值字段构成组内的堆叠，会自�
 
 | 选项 | 类型 | 默认 | 说明 |
 |------|------|------|------|
-| `pointSize` | number | `9` | 点大小 |
+| `pointSize` | number | `10` | 点大小 |
 | `seriesBy` | string | — | 扁平记录下用于分组的字段名 |
 | `xLegend` | string | — | X 轴标题 |
 | `yLegend` | string | — | Y 轴标题 |

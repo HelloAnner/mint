@@ -1,5 +1,6 @@
 import type { OptionSpec } from '../core/types'
 import { makeFormatter, type FormatPreset } from '../core/format'
+import { STYLE } from '../core/style'
 
 export const legendOption: OptionSpec = {
   key: 'legend',
@@ -80,9 +81,9 @@ export function seriesLegend(
       direction: 'row' as const,
       translateY: -40,
       itemWidth: legendItemWidth(series.map((s) => s.id)),
-      itemHeight: 18,
-      itemsSpacing: 14,
-      symbolSize: 9,
+      itemHeight: STYLE.legend.itemHeight,
+      itemsSpacing: STYLE.legend.itemsSpacing,
+      symbolSize: STYLE.legend.symbolSize,
       symbolShape: 'circle' as const,
     },
   ]
@@ -98,9 +99,9 @@ export function keysLegend(hasLegend: boolean, keys: readonly string[] = []) {
       direction: 'row' as const,
       translateY: -40,
       itemWidth: legendItemWidth(keys),
-      itemHeight: 18,
-      itemsSpacing: 12,
-      symbolSize: 9,
+      itemHeight: STYLE.legend.itemHeight,
+      itemsSpacing: STYLE.legend.itemsSpacing,
+      symbolSize: STYLE.legend.symbolSize,
       symbolShape: 'circle' as const,
     },
   ]

@@ -1,6 +1,7 @@
 import { Line } from '@nivo/line'
 import type { ChartDefinition } from '../core/types'
 import { asSeries } from './helpers'
+import { STYLE, areaGradients } from '../core/style'
 import {
   axisLegendOptions,
   formatOptions,
@@ -40,7 +41,7 @@ const line: ChartDefinition = {
     },
     { key: 'area', type: 'boolean', description: '是否填充面积（面积图）', default: false },
     { key: 'points', type: 'boolean', description: '是否显示数据点', default: false },
-    { key: 'lineWidth', type: 'number', description: '线宽', default: 2.6 },
+    { key: 'lineWidth', type: 'number', description: '线宽', default: 3 },
     { key: 'seriesBy', type: 'string', description: '扁平记录下用于分组的字段名' },
     { key: 'xBy', type: 'string', description: 'X 字段名，默认 x' },
     { key: 'yBy', type: 'string', description: 'Y 字段名，默认 y' },
@@ -64,6 +65,11 @@ const line: ChartDefinition = {
     })
     const format = formatterFrom(ctx.options)
     const legend = ctx.options.legend !== false
+    const withArea = ctx.options.area === true
+    const gradient = areaGradients(
+      series.map((s) => s.id),
+      ctx.colors,
+    )
 
     return (
       <Line
@@ -81,14 +87,17 @@ const line: ChartDefinition = {
         xScale={{ type: 'point' }}
         yScale={{ type: 'linear', min: 0, max: 'auto' }}
         curve={ctx.options.curve ?? 'monotoneX'}
-        lineWidth={ctx.options.lineWidth ?? 2.6}
-        enableArea={ctx.options.area === true}
-        areaOpacity={0.14}
+        lineWidth={ctx.options.lineWidth ?? STYLE.line.width}
+        enableArea={withArea}
+        areaOpacity={withArea ? 1 : 0}
+        // 渐变填充：贴着折线稍显、往下淡出，比整块色块轻
+        defs={withArea ? (gradient.defs as never) : []}
+        fill={withArea ? (gradient.fill as never) : []}
         enablePoints={ctx.options.points === true}
-        pointSize={6}
-        pointColor={ctx.foreground}
+        pointSize={STYLE.line.pointSize}
+        pointColor={{ from: 'serieColor' }}
         pointBorderWidth={2}
-        pointBorderColor={{ from: 'serieColor' }}
+        pointBorderColor={ctx.background}
         enableGridX={false}
         enableSlices="x"
         useMesh
@@ -96,14 +105,15 @@ const line: ChartDefinition = {
         axisRight={null}
         axisBottom={{
           tickSize: 0,
-          tickPadding: 12,
+          tickPadding: STYLE.tickPadding,
           legend: ctx.options.xLegend,
           legendPosition: 'middle',
           legendOffset: 44,
         }}
         axisLeft={{
           tickSize: 0,
-          tickPadding: 12,
+          tickPadding: STYLE.tickPadding,
+          tickValues: STYLE.tickCount,
           legend: ctx.options.yLegend,
           legendPosition: 'middle',
           legendOffset: -58,

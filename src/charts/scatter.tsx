@@ -2,6 +2,7 @@ import { ScatterPlot } from '@nivo/scatterplot'
 import type { ChartDefinition } from '../core/types'
 import { asSeries, isPlainObject } from './helpers'
 import { axisLegendOptions, formatOptions, formatterFrom, legendOption, seriesLegend, topMargin } from './common'
+import { STYLE } from '../core/style'
 
 /**
  * 散点图 / 气泡图：看两个（或三个）变量之间的关系与离群点。
@@ -22,7 +23,7 @@ const scatter: ChartDefinition = {
   variants: ['points 散点', 'bubble 气泡'],
   aliases: ['散点', '气泡图', 'bubble', '相关性'],
   options: [
-    { key: 'pointSize', type: 'number', description: '点大小', default: 9 },
+    { key: 'pointSize', type: 'number', description: '点大小', default: 10 },
     { key: 'seriesBy', type: 'string', description: '扁平记录下用于分组的字段名' },
     { key: 'xLegend', type: 'string', description: 'X 轴标题' },
     { key: 'yLegend', type: 'string', description: 'Y 轴标题' },
@@ -69,21 +70,23 @@ const scatter: ChartDefinition = {
         }}
         xScale={{ type: 'linear', min: 'auto', max: 'auto' }}
         yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
-        nodeSize={ctx.options.pointSize ?? 9}
+        nodeSize={ctx.options.pointSize ?? STYLE.scatter.size}
         enableGridX
         enableGridY
         axisTop={null}
         axisRight={null}
         axisBottom={{
           tickSize: 0,
-          tickPadding: 12,
+          tickPadding: STYLE.tickPadding,
+          tickValues: STYLE.tickCount,
           legend: ctx.options.xLegend,
           legendPosition: 'middle',
           legendOffset: 44,
         }}
         axisLeft={{
           tickSize: 0,
-          tickPadding: 12,
+          tickPadding: STYLE.tickPadding,
+          tickValues: STYLE.tickCount,
           legend: ctx.options.yLegend,
           legendPosition: 'middle',
           legendOffset: -58,

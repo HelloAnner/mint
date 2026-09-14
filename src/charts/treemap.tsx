@@ -73,7 +73,8 @@ const treemap: ChartDefinition = {
             `${node.data?.name ?? node.id ?? ''}  ${format(node.value ?? 0)}`) as never
         }
         labelTextColor="#ffffff"
-        parentLabelTextColor="#ffffff"
+        // 父节点是浅色系 tint，固定白字看不清，跟随底色加深更稳
+        parentLabelTextColor={{ from: 'color', modifiers: [['darker', 3.2]] }}
         borderColor={{ from: 'color', modifiers: [['darker', 0.6]] }}
         valueFormat={format}
         animate={false}

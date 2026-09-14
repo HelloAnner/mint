@@ -1,6 +1,7 @@
 import { Bar } from '@nivo/bar'
 import type { ChartDefinition } from '../core/types'
 import { asRows, inferIndexKeys } from './helpers'
+import { STYLE, barGradients } from '../core/style'
 import {
   axisLegendOptions,
   formatOptions,
@@ -34,7 +35,7 @@ const bar: ChartDefinition = {
     { key: 'layout', type: 'string', description: '方向', default: 'vertical', values: ['vertical', 'horizontal'] },
     { key: 'indexBy', type: 'string', description: '分类轴字段名' },
     { key: 'keys', type: 'array', description: '参与绘制的数值字段，逗号分隔' },
-    { key: 'borderRadius', type: 'number', description: '柱子的圆角半径', default: 4 },
+    { key: 'borderRadius', type: 'number', description: '柱子的圆角半径', default: 6 },
     { key: 'valueLabel', type: 'boolean', description: '是否在柱子上直接标数值', default: true },
     legendOption,
     ...axisLegendOptions,
@@ -58,12 +59,16 @@ const bar: ChartDefinition = {
     const format = formatterFrom(ctx.options)
     const legend = ctx.options.legend !== false
     const horizontal = ctx.options.layout === 'horizontal'
+    // 同色系渐变让柱子带一点光泽，比纯色更精致
+    const gradient = barGradients(keys, ctx.colors, horizontal)
 
     return (
       <Bar
         data={rows as never}
         keys={keys}
         indexBy={indexBy}
+        defs={gradient.defs as never}
+        fill={gradient.fill as never}
         width={ctx.width}
         height={ctx.height}
         theme={ctx.theme}
@@ -78,9 +83,9 @@ const bar: ChartDefinition = {
         layout={horizontal ? 'horizontal' : 'vertical'}
         valueScale={{ type: 'linear' }}
         indexScale={{ type: 'band', round: true }}
-        padding={0.28}
-        innerPadding={4}
-        borderRadius={ctx.options.borderRadius ?? 4}
+        padding={STYLE.bar.padding}
+        innerPadding={STYLE.bar.innerPadding}
+        borderRadius={ctx.options.borderRadius ?? STYLE.bar.radius}
         enableGridX={horizontal}
         enableGridY={!horizontal}
         enableLabel={ctx.options.valueLabel !== false}
@@ -91,7 +96,9 @@ const bar: ChartDefinition = {
         axisRight={null}
         axisBottom={{
           tickSize: 0,
-          tickPadding: 12,
+          tickPadding: STYLE.tickPadding,
+          // 横向柱状图的底轴是数值轴，刻度收敛到 5 条更干净
+          tickValues: horizontal ? STYLE.tickCount : undefined,
           legend: ctx.options.xLegend,
           legendPosition: 'middle',
           legendOffset: 44,
@@ -99,7 +106,8 @@ const bar: ChartDefinition = {
         }}
         axisLeft={{
           tickSize: 0,
-          tickPadding: 12,
+          tickPadding: STYLE.tickPadding,
+          tickValues: horizontal ? undefined : STYLE.tickCount,
           legend: ctx.options.yLegend,
           legendPosition: 'middle',
           legendOffset: horizontal ? -76 : -58,

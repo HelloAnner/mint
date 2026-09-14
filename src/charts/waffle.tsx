@@ -54,7 +54,7 @@ value 是"格数"的权重，total 是格子总数（默认取权重之和，上
         height={ctx.height}
         theme={ctx.theme}
         colors={ctx.colors}
-        margin={{ top: 20, right: 30, bottom: legend ? 66 : 24, left: 30 }}
+        margin={{ top: 20, right: 30, bottom: legend ? 82 : 24, left: 30 }}
         fillDirection={(ctx.options.fillDirection as never) ?? 'top'}
         padding={2}
         emptyColor={(ctx.options.emptyColor as string) ?? '#f1f5f9'}
@@ -66,7 +66,7 @@ value 是"格数"的权重，total 是格子总数（默认取权重之和，上
                 {
                   anchor: 'bottom',
                   direction: 'row',
-                  translateY: 52,
+                  translateY: 48,
                   itemWidth: 88,
                   itemHeight: 18,
                   itemsSpacing: 12,

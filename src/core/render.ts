@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import type { ReactElement } from 'react'
 import { buildTheme, getModeTokens, getPalette, type ThemeMode } from './palettes'
 import { resolveFont, type FontChoice } from './fonts'
-import { computeChartArea, extractInnerSvg, frameChart } from './frame'
+import { computeChartArea, extractInnerSvg, frameChart, unwrapQuotedUrlFills } from './frame'
 import { rasterize } from './raster'
 import { normalizeOptions, type OutputFormat } from './spec'
 import type { ChartDefinition } from './types'
@@ -95,20 +95,22 @@ export async function renderChart(request: RenderRequest): Promise<RenderResult>
   const markup = renderToSvg(element)
   const innerSvg = extractInnerSvg(markup)
 
-  const svg = frameChart({
-    ...area,
-    innerSvg,
-    width,
-    height,
-    title: request.title,
-    subtitle: request.subtitle,
-    footnote: request.footnote,
-    background: tokens.background,
-    foreground: tokens.foreground,
-    muted: tokens.muted,
-    fontFamily: font.family,
-    border: request.border ? tokens.axisLine : undefined,
-  })
+  const svg = unwrapQuotedUrlFills(
+    frameChart({
+      ...area,
+      innerSvg,
+      width,
+      height,
+      title: request.title,
+      subtitle: request.subtitle,
+      footnote: request.footnote,
+      background: tokens.background,
+      foreground: tokens.foreground,
+      muted: tokens.muted,
+      fontFamily: font.family,
+      border: request.border ? tokens.axisLine : undefined,
+    }),
+  )
 
   let png: Uint8Array | undefined
   if (format === 'png' || format === 'both') {

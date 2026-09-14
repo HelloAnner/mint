@@ -63,6 +63,8 @@ const sunburst: ChartDefinition = {
         cornerRadius={ctx.options.cornerRadius ?? 3}
         borderWidth={ctx.options.borderWidth ?? 1}
         borderColor={{ from: 'color', modifiers: [['darker', 0.5]] }}
+        enableArcLabels
+        arcLabel={((node: { id: string | number; data?: { name?: string } }) => node.data?.name ?? String(node.id)) as never}
         arcLabelsSkipAngle={12}
         valueFormat={format}
         animate={false}

@@ -80,19 +80,20 @@ const MODES: Record<ThemeMode, ModeTokens> = {
     background: '#ffffff',
     foreground: '#0f172a',
     muted: '#64748b',
-    axisLine: '#dbe3ec',
-    gridLine: '#eef2f7',
-    tickText: '#7c8aa0',
-    domainLine: '#dbe3ec',
+    axisLine: '#e2e8f0',
+    gridLine: '#eef1f5',
+    tickText: '#94a3b8',
+    // 现代极简风格不画坐标轴线，只用浅网格定锚
+    domainLine: 'transparent',
   },
   dark: {
     background: '#0f172a',
-    foreground: '#f1f5f9',
+    foreground: '#f8fafc',
     muted: '#94a3b8',
-    axisLine: '#334155',
-    gridLine: '#1e293b',
+    axisLine: '#1e293b',
+    gridLine: '#1b2434',
     tickText: '#94a3b8',
-    domainLine: '#334155',
+    domainLine: 'transparent',
   },
 }
 
@@ -131,19 +132,20 @@ export function buildTheme(mode: ThemeMode, fontFamily: string): PartialTheme {
       fill: t.foreground,
     },
     axis: {
-      domain: { line: { stroke: t.domainLine, strokeWidth: 1 } },
-      legend: { text: { fontSize: 13, fontWeight: 600, fill: t.muted } },
+      domain: { line: { stroke: t.domainLine, strokeWidth: 0 } },
+      legend: { text: { fontSize: 12.5, fontWeight: 600, fill: t.muted } },
       ticks: {
-        line: { stroke: t.domainLine, strokeWidth: 1 },
+        line: { stroke: 'transparent', strokeWidth: 0 },
         text: { fontSize: 12, fill: t.tickText },
       },
     },
+    // 实线 + 极浅灰：比虚线网格安静得多，也不会和数据线抢视觉
     grid: {
-      line: { stroke: t.gridLine, strokeWidth: 1, strokeDasharray: '4 4' },
+      line: { stroke: t.gridLine, strokeWidth: 1, strokeDasharray: '0' },
     },
     legends: { text: { fontSize: 12.5, fill: t.muted } },
-    labels: { text: { fontSize: 11, fontWeight: 700, fill: mode === 'dark' ? '#0f172a' : '#ffffff' } },
-    crosshair: { line: { stroke: t.muted, strokeWidth: 1, strokeDasharray: '4 4' } },
+    labels: { text: { fontSize: 11, fontWeight: 600, fill: mode === 'dark' ? '#0f172a' : '#ffffff' } },
+    crosshair: { line: { stroke: t.muted, strokeWidth: 1, strokeDasharray: '4 4', strokeOpacity: 0.6 } },
     tooltip: {
       container: {
         background: mode === 'dark' ? '#f8fafc' : '#0f172a',

@@ -3,17 +3,17 @@ import { fail } from './errors'
 /** 画布留白与标题排版参数（单位：px，针对最终图像的逻辑尺寸） */
 export const LAYOUT = {
   padX: 40,
-  padTop: 34,
+  padTop: 36,
   padBottom: 34,
-  titleSize: 27,
-  titleLine: 36,
-  subtitleSize: 14.5,
-  subtitleLine: 22,
-  titleSubtitleGap: 8,
-  headerGap: 18,
+  titleSize: 26,
+  titleLine: 34,
+  subtitleSize: 14,
+  subtitleLine: 20,
+  titleSubtitleGap: 7,
+  headerGap: 22,
   footnoteSize: 12,
   footnoteLine: 18,
-  footnoteGap: 12,
+  footnoteGap: 14,
   minChartHeight: 80,
 } as const
 
@@ -38,6 +38,14 @@ export function extractInnerSvg(markup: string): string {
   }
   const openTagEnd = markup.indexOf('>', start)
   return markup.slice(openTagEnd + 1, end)
+}
+
+/**
+ * nivo 的桑基流等手写 fill="url("#id")"，React 序列化后引号变成 &quot;，
+ * resvg 解析不了带引号的 url() 引用（会退化成黑色填充），这里统一还原。
+ */
+export function unwrapQuotedUrlFills(svg: string): string {
+  return svg.replace(/url\(&quot;#([^&]+?)&quot;\)/g, 'url(#$1)')
 }
 
 export interface ChartArea {
@@ -115,7 +123,7 @@ export function frameChart(input: FrameInput): string {
   if (input.title) {
     cursor += L.titleSize
     parts.push(
-      `<text x="${L.padX}" y="${cursor}" font-family="${escapeXml(fontFamily)}" font-size="${L.titleSize}" font-weight="700" fill="${foreground}">${escapeXml(input.title)}</text>`,
+      `<text x="${L.padX}" y="${cursor}" font-family="${escapeXml(fontFamily)}" font-size="${L.titleSize}" font-weight="700" letter-spacing="-0.015em" fill="${foreground}">${escapeXml(input.title)}</text>`,
     )
     cursor += L.titleLine - L.titleSize
   }

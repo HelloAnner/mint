@@ -25,7 +25,7 @@ const radar: ChartDefinition = {
   options: [
     { key: 'indexBy', type: 'string', description: '维度字段名' },
     { key: 'keys', type: 'array', description: '比较对象字段，逗号分隔' },
-    { key: 'fillOpacity', type: 'number', description: '填充不透明度，0 为纯描边', default: 0.22 },
+    { key: 'fillOpacity', type: 'number', description: '填充不透明度，0 为纯描边', default: 0.15 },
     { key: 'gridLevels', type: 'number', description: '网格层数', default: 5 },
     legendOption,
     ...axisLegendOptions,
@@ -39,7 +39,7 @@ const radar: ChartDefinition = {
       { dimension: '生态', 本产品: 90, 竞品A: 60 },
       { dimension: '服务', 本产品: 78, 竞品A: 70 },
     ],
-    options: { fillOpacity: 0.22 },
+    options: { fillOpacity: 0.15 },
   },
   render: (ctx) => {
     const rows = asRows(ctx.data, 'radar')
@@ -59,10 +59,10 @@ const radar: ChartDefinition = {
         height={ctx.height}
         theme={ctx.theme}
         colors={ctx.colors}
-        margin={{ top: 30, right: 90, bottom: legend ? 70 : 40, left: 90 }}
+        margin={{ top: 30, right: 90, bottom: legend ? 80 : 40, left: 90 }}
         gridLevels={ctx.options.gridLevels ?? 5}
         gridShape="circular"
-        fillOpacity={ctx.options.fillOpacity ?? 0.22}
+        fillOpacity={ctx.options.fillOpacity ?? 0.15}
         borderWidth={2}
         dotSize={8}
         dotBorderWidth={2}
@@ -79,7 +79,8 @@ const radar: ChartDefinition = {
                   })),
                   anchor: 'bottom',
                   direction: 'row',
-                  translateY: 56,
+                  // nivo 的图例按外层画布定位，translateY 过大会把图例推到画布外
+                  translateY: 24,
                   itemWidth: 88,
                   itemHeight: 18,
                   itemsSpacing: 12,

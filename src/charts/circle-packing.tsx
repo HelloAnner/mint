@@ -50,6 +50,9 @@ const circlePacking: ChartDefinition = {
         colors={ctx.colors}
         margin={{ top: 12, right: 12, bottom: 12, left: 12 }}
         padding={ctx.options.padding ?? 4}
+        enableLabels
+        // 根节点标签会压在子圆上（圆心几乎必然落在某个大子圆里），跳过它
+        labelsFilter={((label: { node: { depth: number } }) => label.node.depth >= 1) as never}
         labelsSkipRadius={ctx.options.labelSkipRadius ?? 12}
         labelTextColor={{ from: 'color', modifiers: [['brighter', 3]] }}
         borderWidth={1}

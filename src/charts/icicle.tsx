@@ -63,7 +63,10 @@ const icicle: ChartDefinition = {
         orientation={ctx.options.orientation === 'horizontal' ? 'right' : 'top'}
         borderWidth={ctx.options.borderWidth ?? 1}
         borderColor={{ from: 'color', modifiers: [['darker', 0.6]] }}
+        enableLabels
+        label={(node: { id: string; data?: { name?: string } }) => node.data?.name ?? node.id}
         labelSkipWidth={ctx.options.labelSkipWidth ?? 24}
+        labelSkipHeight={12}
         labelTextColor={{ from: 'color', modifiers: [['brighter', 3]] }}
         valueFormat={format}
         animate={false}
