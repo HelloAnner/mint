@@ -12,12 +12,15 @@ DIST    := dist/mint
 SKILL_SRC := skills/mint
 SKILL_DEST := $(HOME)/.agents/skills/mint
 
-.PHONY: help install install-cli install-skill uninstall uninstall-skill build dev test typecheck embed examples check clean
+# 依赖装好后留个标记，package.json / bun.lock 变化时会重新安装
+DEPS_STAMP := node_modules/.mint-deps
+
+.PHONY: help deps install install-cli install-skill uninstall uninstall-skill build dev test typecheck embed examples check clean
 
 help:
 	@echo "mint —— 把数据变成美观的图表"
 	@echo ""
-	@echo "  make install        安装 CLI 到 $(BIN_DIR) 并安装 skill 软链"
+	@echo "  make install        安装 CLI 到 $(BIN_DIR) 并安装 skill 软链（会自动装依赖）"
 	@echo "  make install-cli    只安装 CLI"
 	@echo "  make install-skill  只安装 skill 软链到 $(SKILL_DEST)"
 	@echo "  make uninstall      卸载 CLI 与 skill"
@@ -31,12 +34,22 @@ help:
 	@echo ""
 	@echo "PREFIX 当前为 $(PREFIX)，可用 make install PREFIX=/usr/local 覆盖"
 
+# ── 依赖 ──────────────────────────────────────────────────
+# 全新克隆后 node_modules 是空的，直接编译会报 Cannot find module '@nivo/...'，
+# 所以所有需要依赖的目标都先经过这里。
+$(DEPS_STAMP): package.json bun.lock
+	@echo "→ 安装依赖 ..."
+	@bun install
+	@touch $@
+
+deps: $(DEPS_STAMP)
+
 install: install-cli install-skill
 	@echo ""
 	@echo "✓ 安装完成。跑 mint doctor 自检，或 mint list 看看有哪些图。"
 	@if echo ":$$PATH:" | grep -q ":$(BIN_DIR):"; then echo "  $(BIN_DIR) 已在 PATH 中"; else echo "  提醒：$(BIN_DIR) 不在 PATH 中，需要自行加入"; fi
 
-install-cli:
+install-cli: deps
 	@echo "→ 编译 mint ..."
 	@bun run scripts/build.ts
 	@mkdir -p "$(BIN_DIR)"
@@ -59,22 +72,22 @@ uninstall: uninstall-skill
 uninstall-skill:
 	@if [ -L "$(SKILL_DEST)" ]; then rm -f "$(SKILL_DEST)"; echo "→ 已移除 skill 软链"; else echo "→ 未发现 skill 软链，跳过"; fi
 
-build: embed
+build: deps embed
 	@bun run scripts/build.ts
 
-dev:
+dev: deps
 	@bun run src/cli.ts
 
 embed:
 	@bun run scripts/embed.ts
 
-test:
+test: deps
 	@bun test
 
-typecheck:
+typecheck: deps
 	@bunx tsc --noEmit
 
-examples:
+examples: deps
 	@bun run scripts/examples.tsx
 
 check: typecheck test build

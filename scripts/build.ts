@@ -1,5 +1,5 @@
 /**
- * 编译单文件二进制：bun build --compile --minify。
+ * 编译单文件二进制：bun build --compile --production。
  * skill 内容与 resvg 的 wasm 都通过 file 导入被 bun 打进二进制，产物可以单独分发。
  */
 import { mkdirSync, rmSync, statSync } from 'node:fs'
@@ -27,12 +27,15 @@ rmSync(OUT_DIR, { recursive: true, force: true })
 mkdirSync(OUT_DIR, { recursive: true })
 
 const target = join(OUT_DIR, 'mint')
+// 必须带 --production：它把 JSX 从开发版的 jsx-dev-runtime 切到生产版的 jsx-runtime。
+// 开发版运行时被打进单文件二进制后解析出来是 undefined（bun 1.3.x），
+// 一渲染就报 “jsxDEV is not a function”，所以只用 --minify 是不够的。
 const build = Bun.spawnSync({
   cmd: [
     'bun',
     'build',
     '--compile',
-    '--minify',
+    '--production',
     '--outfile',
     target,
     join(REPO, 'src', 'cli.ts'),

@@ -52,7 +52,8 @@ jobs:
             asset="${entry%%:*}"
             target="${entry##*:}"
             echo "::group::编译 $asset"
-            bun build --compile --minify --target="$target" --outfile="release/$asset" src/cli.ts
+            # --production：JSX 走生产版 jsx-runtime；开发版在单文件二进制里会解析成 undefined
+            bun build --compile --production --minify --target="$target" --outfile="release/$asset" src/cli.ts
             echo "::endgroup::"
           done
 

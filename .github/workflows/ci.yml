@@ -45,3 +45,12 @@ jobs:
 
       - name: 二进制自检
         run: ./dist/mint doctor
+
+      # doctor 只能证明二进制起得来，必须真出一张图才能覆盖 JSX 运行时
+      - name: 二进制出图冒烟
+        run: |
+          cat > /tmp/smoke.json <<'JSON'
+          [{ "name": "华东", "value": 320 }, { "name": "华北", "value": 210 }]
+          JSON
+          ./dist/mint render circle-packing --data /tmp/smoke.json -o /tmp/smoke.png
+          test -s /tmp/smoke.png
