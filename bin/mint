@@ -1,0 +1,23 @@
+#!/bin/sh
+# mint —— 把数据变成期刊级图表的 CLI
+#
+# 这是个薄壳：定位仓库 → 把私有依赖库挂到 R 的搜索路径 → 交给 R 入口。
+# 直接跑 Rscript R/main.R 也可以，只是要自己保证依赖库在 .libPaths 里。
+
+set -e
+
+MINT_HOME=${MINT_HOME:-$(cd "$(dirname "$0")/.." && pwd)}
+MINT_LIB=${MINT_LIB:-$HOME/.local/share/mint/rlib}
+
+if ! command -v Rscript >/dev/null 2>&1; then
+  echo "mint: 找不到 Rscript，请先安装 R（https://cran.r-project.org 或 brew install r）" >&2
+  exit 1
+fi
+
+if [ ! -d "$MINT_LIB" ]; then
+  echo "mint: 依赖库不存在：$MINT_LIB" >&2
+  echo "      先运行：Rscript $MINT_HOME/scripts/install-deps.R" >&2
+  exit 1
+fi
+
+R_LIBS_USER="$MINT_LIB" exec Rscript --vanilla "$MINT_HOME/R/main.R" "$@"

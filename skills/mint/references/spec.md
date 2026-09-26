@@ -1,85 +1,119 @@
-# mint spec 与选项详解
+# mint 命令与 spec 参考
 
-## 两种输入方式
+## 命令一览
 
-### 1. 命令行参数（单张图，最常用）
+```
+mint render <chart> [选项]        渲染一张图
+mint batch <spec.json>            按 spec 批量渲染
+mint list [--json]                列出全部图表
+mint info <chart> [--json]        数据结构、选项与示例
+mint palettes [--json]            列出调色板
+mint styles [--json]              列出风格
+mint doctor [--json]              环境自检
+mint install skill [--force]      安装 skill 软链
+mint uninstall skill              移除 skill 软链
+mint skill [status|path|list|show]  查看 skill 状态
+mint version | help               版本与帮助
+```
+
+## mint render
+
+| 参数 | 说明 | 默认 |
+|------|------|------|
+| `-d, --data <file\|->` | 数据 JSON 文件，`-` 读 stdin | 该图内置示例数据 |
+| `-o, --out <file>` | 输出路径。不带扩展名按格式自动补；`-` 表示把 SVG 写到 stdout | `./<chart>.png` |
+| `-t, --title <text>` | 标题（支持 `\n` 换行） | 无 |
+| `-S, --subtitle <text>` | 副标题 | 无 |
+| `--footnote <text>` | 脚注（数据来源等） | 无 |
+| `-W, --width <in>` | 画布宽度（英寸） | 7 |
+| `-H, --height <in>` | 画布高度（英寸） | 4.35，固定长宽比的图会自动撑高 |
+| `--dpi <n>` | 分辨率 | 300 |
+| `-f, --format <fmt>` | `png` / `svg` / `both` | 由 `-o` 扩展名决定，否则 png |
+| `-p, --palette <id>` | 调色板 id | `npg` |
+| `--style <id>` | 风格 id | `professional` |
+| `--font-family <name>` | 字体家族名 | 自动探测中文字体 |
+| `--set <k=v>` | 图表选项，可重复 | — |
+| `--options <json>` | 图表选项 JSON 对象 | — |
+| `--json` | 输出机器可读结果 | — |
+| `-q, --quiet` | 静默 | — |
+
+示例：
 
 ```bash
-mint render bar --data revenue.json --title "标题" --set groupMode=stacked -o out.png
+# 用示例数据快速出图
+mint render bar -o bar.png
+
+# 指定数据、尺寸、调色板，同时产出矢量图
+mint render line -d trend.json -W 3.5 -H 2.6 --palette okabe --format both -o trend
+
+# 图表选项用 --set（会按字面量解析 true/false/数字/数组）
+mint render bar -d d.json --set groupMode=stacked --set sort=desc --set valueLabel=false -o stacked.png
+
+# 从 stdin 读数据，SVG 直接进管道
+cat data.json | mint render pie -d - -f svg -o - > pie.svg
 ```
 
-### 2. spec JSON（批量或需要精确控制时）
+## mint batch
 
-`mint batch spec.json`，文件可以是「一张图的 spec」，也可以是「多张图的数组」。
+spec 文件可以是「对象数组」、「带 charts 的对象」或「单个对象」：
 
 ```jsonc
 {
-  "chart": "bar",                 // 必填，图表 id
-  "data": [ /* 必填，数据结构见 mint info <chart> */ ],
-  "title": "各区域季度营收",
-  "subtitle": "单位：百万元",
-  "footnote": "数据来源：财务系统",
-  "width": 1280,                  // 逻辑宽度，默认 1280
-  "height": 760,                  // 逻辑高度，默认 760
-  "scale": 2,                     // 输出倍数，默认 2（2x 高清）
-  "theme": "light",               // light | dark
-  "palette": "mint",              // 见 mint palettes
-  "format": "png",                // png | svg | both
-  "font": "/path/to/font.ttc",    // 可选，指定字体
-  "options": {                    // 图表专属选项，见 mint info <chart>
-    "groupMode": "stacked",
-    "yLegend": "营收（百万元）"
-  }
-}
-```
-
-批量写法：
-
-```jsonc
-{
-  "defaults": { "palette": "indigo", "theme": "light", "width": 1200 },
+  "defaults": {                       // 可省略，作用到每一项
+    "width": 7, "height": 4.35, "dpi": 300,
+    "palette": "npg", "style": "professional", "format": "png",
+    "options": { "legend": true }
+  },
   "charts": [
-    { "chart": "bar",  "data": [/* … */], "out": "out/01-revenue.png" },
-    { "chart": "line", "dataFile": "dau.json", "out": "out/02-dau.png", "title": "日活趋势" }
+    {
+      "chart": "bar",                 // 必填
+      "data": [ /* 内联数据 */ ],      // 与 data_file 二选一
+      "data_file": "revenue.json",    // 相对 spec 文件所在目录
+      "title": "季度营收", "subtitle": "单位：百万元", "footnote": "数据来源：财务系统",
+      "width": 7, "height": 4.35, "dpi": 300,
+      "palette": "nejm", "style": "professional", "format": "svg",
+      "out": "revenue.svg",           // 省略则用 <chart>.png
+      "options": { "groupMode": "stacked" }
+    }
   ]
 }
 ```
 
-- `defaults` 会与每项的字段合并，每项可覆盖。
-- 每项可以用 `dataFile` 代替内联 `data`，路径相对 spec 文件所在目录解析。
-- 不写 `out` 时默认输出到 `./<chart>.png`（重名会自动加序号）。
+| 参数 | 说明 |
+|------|------|
+| `--outdir <dir>` | 所有输出的根目录（只取 out 的文件名） |
+| `--stop-on-error` | 遇到第一个错误就停 |
+| `--json` | 输出机器可读的汇总 |
+| `-q, --quiet` | 静默 |
 
-## 所有图表共享的选项
+批量渲染在**一个 R 进程**里完成所有图，比逐张调 `mint render` 快得多（省掉每次启动 R 和加载 ggplot2 的开销）。
 
-这些选项在每张图上都可用（不是每张都生效）：
+## 退出码与错误码
 
-| 选项 | 类型 | 说明 |
-|------|------|------|
-| `legend` | boolean | 是否显示图例，默认 `true` |
-| `valueFormat` | string | `number`（默认，千分位）\| `percent` \| `compact`（1.2万 / 3.4亿） |
-| `decimals` | number | 小数位数 |
-| `valuePrefix` / `valueSuffix` | string | 数值前后缀，如 `¥` / ` 万` |
-| `xLegend` / `yLegend` | string | 坐标轴标题 |
+成功返回 0，失败返回 1；错误打到 stderr，格式为 `mint: [CODE] 信息` + 一行可操作提示。
 
-其余选项是图表专属的，`mint info <chart>` 会完整列出，包括类型、默认值和可选值。
+| 错误码 | 含义 |
+|--------|------|
+| `UNKNOWN_CHART` | 图表 id 不存在（会给出近似建议） |
+| `UNKNOWN_FLAG` / `MISSING_ARGUMENT` | 参数写错或缺参数 |
+| `INVALID_DATA` | 数据结构不符合该图表要求 |
+| `INVALID_SPEC` / `INVALID_VALUE` | spec 或选项取值不合法 |
+| `DATA_NOT_FOUND` | 数据文件/spec 文件读不到 |
+| `CANVAS_TOO_SMALL` | 画布减掉标题留白后太小，或内容放不下 |
+| `UNKNOWN_PALETTE` / `UNKNOWN_STYLE` | 调色板/风格 id 不存在 |
+| `MISSING_PACKAGE` | 该图表需要的 R 包装没装 |
+| `FONT_NOT_FOUND` | `MINT_FONT` 指定的字体文件不存在 |
+| `SKILL_EXISTS` | skill 目标路径已存在且不是 mint 管理的软链 |
 
-## 尺寸与排版
+## 环境变量
 
-- 画布会被自动切分：上边距放标题和副标题，下边距放脚注，中间是绘图区。
-- 默认 1280×760 配 `--scale 2` 输出 2560×1520 的 PNG，适合嵌进报告再缩放到 50%~70%。
-- 做封面通栏图时用 `--width 1600 --height 900`。
-- 嵌进窄侧栏时用 `--width 900 --height 700`。
-- 没有标题/副标题时，绘图区会自动占满整张画布。
-- 画布太小（绘图区不足 120×80）会直接报 `CANVAS_TOO_SMALL`。
-
-## 退出码
-
-| 码 | 含义 |
-|----|------|
-| 0 | 成功 |
-| 1 | 运行失败（`INVALID_DATA` / `CANVAS_TOO_SMALL` / `UNKNOWN_CHART` 等） |
-| 2 | 参数用法错误 |
-
-配合 `--json` 时，成功会输出 `{ "ok": true, "outputs": [...] }`，
-失败输出 `{ "ok": false, "error": { "code": "...", "message": "...", "hint": "..." } }`，
-便于脚本判断。
+| 变量 | 作用 |
+|------|------|
+| `MINT_LIB` | R 依赖库路径（默认 `~/.local/share/mint/rlib`） |
+| `MINT_HOME` | mint 安装目录（bin/mint 会自动设置） |
+| `MINT_FONT_FAMILY` | 覆盖字体家族名 |
+| `MINT_FONT` | 指定字体文件路径（.ttf/.otf/.ttc） |
+| `MINT_SKILLS_DIR` | skill 安装根目录（默认 `~/.agents/skills`） |
+| `MINT_CRAN` | 安装依赖时使用的 CRAN 镜像 |
+| `MINT_DEBUG=1` | 出错时打印 R 堆栈 |
+| `MINT_QUIET=1` | 静默模式 |

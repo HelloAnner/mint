@@ -1,97 +1,85 @@
-# mint —— 数据到图表的 CLI
+# mint —— 数据到期刊级图表的 CLI（R + ggplot2）
 #
 # 常用目标：
 #   make             = make help
-#   make install     安装 CLI 到 PREFIX/bin，并把 skill 软链到 ~/.agents/skills/mint
-#   make build       编译单文件二进制到 dist/mint
-#   make dev         直接用源码运行 CLI
+#   make deps        安装 R 依赖到 MINT_LIB（默认 ~/.local/share/mint/rlib）
+#   make test        跑全部测试（含 27 张图的端到端渲染）
+#   make examples    把每张图的示例渲染到 out/examples
+#   make docs        从代码重新生成 skill 里的图表目录
+#   make install     安装 CLI shim + skill 软链
+#   make dev         直接用源码运行 CLI（需要已装依赖）
 
 PREFIX ?= $(HOME)/.local
 BIN_DIR := $(PREFIX)/bin
-DIST    := dist/mint
-SKILL_SRC := skills/mint
+MINT_HOME := $(shell pwd)
+MINT_LIB ?= $(HOME)/.local/share/mint/rlib
 SKILL_DEST := $(HOME)/.agents/skills/mint
+EXAMPLES := out/examples
 
-# 依赖装好后留个标记，package.json / bun.lock 变化时会重新安装
-DEPS_STAMP := node_modules/.mint-deps
+export MINT_HOME
+export MINT_LIB
 
-.PHONY: help deps install install-cli install-skill uninstall uninstall-skill build dev test typecheck embed examples check clean
+.PHONY: help deps test check examples docs install install-cli install-skill uninstall clean doctor
 
 help:
-	@echo "mint —— 把数据变成美观的图表"
+	@echo "mint —— 把数据变成期刊级图表"
 	@echo ""
-	@echo "  make install        安装 CLI 到 $(BIN_DIR) 并安装 skill 软链（会自动装依赖）"
-	@echo "  make install-cli    只安装 CLI"
-	@echo "  make install-skill  只安装 skill 软链到 $(SKILL_DEST)"
-	@echo "  make uninstall      卸载 CLI 与 skill"
-	@echo "  make build          编译单文件二进制到 $(DIST)"
-	@echo "  make dev            用源码直接运行 CLI"
-	@echo "  make test           运行测试"
-	@echo "  make typecheck      TypeScript 类型检查"
-	@echo "  make examples       把每张图的示例渲染到 out/examples"
-	@echo "  make check          typecheck + test + build"
-	@echo "  make clean          清理构建产物"
+	@echo "  make deps          安装 R 依赖到 $(MINT_LIB)"
+	@echo "  make test          跑全部测试"
+	@echo "  make examples      渲染全部图表示例到 $(EXAMPLES)"
+	@echo "  make docs          重新生成 skill 里的图表目录"
+	@echo "  make doctor        环境自检"
+	@echo "  make install       安装 CLI 到 $(BIN_DIR) 并装 skill 软链"
+	@echo "  make uninstall     卸载 CLI 与 skill"
+	@echo "  make clean         清理构建产物"
+	@echo ""
+	@echo "  make dev render bar -o bar.png   直接用源码跑 CLI"
 	@echo ""
 	@echo "PREFIX 当前为 $(PREFIX)，可用 make install PREFIX=/usr/local 覆盖"
 
-# ── 依赖 ──────────────────────────────────────────────────
-# 全新克隆后 node_modules 是空的，直接编译会报 Cannot find module '@nivo/...'，
-# 所以所有需要依赖的目标都先经过这里。
-$(DEPS_STAMP): package.json bun.lock
-	@echo "→ 安装依赖 ..."
-	@bun install
-	@touch $@
-
-deps: $(DEPS_STAMP)
-
-install: install-cli install-skill
-	@echo ""
-	@echo "✓ 安装完成。跑 mint doctor 自检，或 mint list 看看有哪些图。"
-	@if echo ":$$PATH:" | grep -q ":$(BIN_DIR):"; then echo "  $(BIN_DIR) 已在 PATH 中"; else echo "  提醒：$(BIN_DIR) 不在 PATH 中，需要自行加入"; fi
-
-install-cli: deps
-	@echo "→ 编译 mint ..."
-	@bun run scripts/build.ts
-	@mkdir -p "$(BIN_DIR)"
-	@cp "$(DIST)" "$(BIN_DIR)/mint"
-	@chmod +x "$(BIN_DIR)/mint"
-	@echo "→ CLI 已安装到 $(BIN_DIR)/mint"
-
-install-skill: embed
-	@echo "→ 安装 skill 到 $(SKILL_DEST)"
-	@mkdir -p "$(HOME)/.agents/skills"
-	@rm -rf "$(SKILL_DEST)"
-	@ln -s "$(CURDIR)/$(SKILL_SRC)" "$(SKILL_DEST)"
-	@echo "  $(SKILL_DEST) -> $(CURDIR)/$(SKILL_SRC)"
-	@test -f "$(SKILL_DEST)/SKILL.md" && echo "  ✓ SKILL.md 可读"
-
-uninstall: uninstall-skill
-	@rm -f "$(BIN_DIR)/mint"
-	@echo "→ 已移除 $(BIN_DIR)/mint"
-
-uninstall-skill:
-	@if [ -L "$(SKILL_DEST)" ]; then rm -f "$(SKILL_DEST)"; echo "→ 已移除 skill 软链"; else echo "→ 未发现 skill 软链，跳过"; fi
-
-build: deps embed
-	@bun run scripts/build.ts
-
-dev: deps
-	@bun run src/cli.ts
-
-embed:
-	@bun run scripts/embed.ts
+deps:
+	@command -v Rscript >/dev/null || { echo "请先安装 R（brew install r 或 https://cran.r-project.org）"; exit 1; }
+	@Rscript scripts/install-deps.R
 
 test: deps
-	@bun test
+	@Rscript tests/run-tests.R
 
-typecheck: deps
-	@bunx tsc --noEmit
+doctor: deps
+	@./bin/mint doctor
+
+check: test
 
 examples: deps
-	@bun run scripts/examples.tsx
+	@Rscript scripts/examples.R $(EXAMPLES)
 
-check: typecheck test build
+docs:
+	@Rscript scripts/gen-docs.R
+
+dev: 
+	@./bin/mint $(filter-out $@,$(MAKECMDGOALS))
+
+install: install-cli install-skill
+	@./bin/mint doctor || true
+
+install-cli: deps
+	@mkdir -p $(BIN_DIR)
+	@ln -sfn $(MINT_HOME)/bin/mint $(BIN_DIR)/mint
+	@echo "已安装 CLI：$(BIN_DIR)/mint → $(MINT_HOME)/bin/mint"
+	@echo "确保 $(BIN_DIR) 在 PATH 里：export PATH=\"$(BIN_DIR):\$$PATH\""
+
+install-skill:
+	@mkdir -p $(dir $(SKILL_DEST))
+	@ln -sfn $(MINT_HOME)/skills/mint $(SKILL_DEST)
+	@echo "已安装 skill：$(SKILL_DEST) → $(MINT_HOME)/skills/mint"
+
+uninstall:
+	@rm -f $(BIN_DIR)/mint
+	@[ -L $(SKILL_DEST) ] && rm -f $(SKILL_DEST) || true
+	@echo "已卸载 CLI 与 skill（R 依赖库保留在 $(MINT_LIB)）"
 
 clean:
-	@rm -rf dist out
-	@echo "→ 已清理 dist/ 与 out/"
+	@rm -rf out dist
+	@echo "已清理 out/ dist/"
+
+%:
+	@:

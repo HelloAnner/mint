@@ -1,233 +1,160 @@
 ---
 name: mint
-description: 把数据变成美观的图表图片。当用户说"画个图""生成图表""做成柱状图/折线图/饼图""把这份数据可视化""给报告配张图""生成图表 PNG"时使用。通过 mint CLI 把 JSON/CSV 数据渲染成 PNG 或 SVG，内置 23 种经过测试的图表（含架构图、流程图、时序图）、7 套调色板与明暗两套主题，支持中文标签。核心命令是 `mint render <chart> --data data.json -o out.png`；不确定用哪种图表时先 `mint list`，需要数据结构说明时用 `mint info <chart>`。
+description: 把数据变成期刊级专业图表。当用户说"画个图""生成图表""做成柱状图/折线图/饼图/热力图""把这份数据可视化""给报告/论文配张图""生成图表 PNG/SVG"时使用。mint 是一个 R + ggplot2 的命令行工具，把 JSON 数据渲染成 300 dpi 的 PNG 或可编辑 SVG，内置 27 种图表、期刊调色板（Nature/Science/NEJM/Lancet/JAMA/Okabe-Ito）与专业排版风格，中文开箱可用。核心命令是 `mint render <chart> --data data.json -o out.png`；不确定用哪种图表先 `mint list`，需要数据结构说明用 `mint info <chart>`。
 ---
 
-# Mint — 数据到图表的 CLI
+# Mint —— 数据到期刊级图表的 CLI
 
-mint 把一份 JSON 数据渲染成一张带标题、副标题、脚注的成品图表（PNG 或 SVG）。
-图表在服务端渲染成 SVG（绝大多数基于 nivo，`architecture` 架构图由 mint 自绘），
-再由 resvg 光栅化为 PNG，不依赖浏览器，单张图通常 100ms 内完成。
+mint 把一份 JSON 数据渲染成一张**成品图**：默认 7 × 4.35 英寸、300 dpi（期刊双栏满宽），
+自带标题、副标题、脚注排版。风格是刻意的期刊风格 —— 细轴线、浅网格、小字号、高信息密度，
+不用渐变、不用圆角、不用阴影。输出可以是 PNG，也可以是**可编辑的矢量 SVG**（投稿优先给 SVG）。
+
+底层是 R + ggplot2；图表布局、字体、配色、版心都由 mint 统一控制。
 
 ## 核心原则
 
-1. **先选对图，再谈美观**。图表类型选错，数据再准也读不出来。拿不准就先读
-   [references/charts.md](references/charts.md) 里的「什么时候用」一列。
-2. **先看数据结构，再决定 chart**。mint 会自动推断分类轴与数值系列，但显式传
-   `indexBy` / `keys` 更稳。数据形状不知道怎么写时，用 `mint info <chart>` 看示例。
-3. **不要一次画太多系列**。同一张图超过 6 个系列就该拆图或改用堆叠；饼图超过 6 个扇区
-   建议换成柱状图或矩形树图。
-4. **中文标题直接写在 spec 里**，不要在图上后期叠加文字。mint 自带中文字体探测。
-5. **验证产出**：渲染完成后读一次生成的 PNG 再交付。图能生成不代表布局没问题
-   （标签重叠、空图、坐标轴超出画布都可能在"成功"之后才发现）。
-6. **临时文件必须清干净**。生成过程中写过的数据 JSON、batch spec、预览图、调试用的 SVG
-   都算临时文件，交付前必须全部删除，**只保留最终要交付的图片**。能不走磁盘就别走
-   （数据用 `--data -` 从 stdin 传），必须落盘就放进临时目录并保证异常退出也会清理。
-   细则见下面「临时文件与清理」。
+1. **先选对图，再谈美观。** 拿不准就读 [references/charts.md](references/charts.md) 的「什么时候用」，
+   或直接 `mint list` / `mint info <chart>`。
+2. **先看数据结构，再决定 chart。** 每种图都有自己的数据形状，`mint info <chart>` 里有可运行示例。
+   数据形状不清楚就先用 `--data -` 把示例数据喂进去试。
+3. **克制地提高信息密度。** 同一张图系列数 ≤ 6；饼图/环形图扇区 ≤ 6；
+   数值能直接标在图形上就不要靠图例来回比对；类别很多时用棒棒糖图或横向柱状图，不要硬塞。
+4. **尺寸按用途选。** 单栏 3.5 in、双栏 7 in（默认）、幻灯片 10 in；
+   `--dpi 300` 用于印刷（默认），屏幕预览用 `--dpi 150` 就够。
+5. **中文直接写在 spec 里**，不要在图上后期叠字。中文字体会自动探测，不会出现方框。
+6. **投稿要矢量图**：`--format both` 同时产出 PNG 与 SVG，正文/排版优先用 SVG。
+7. **验证产出**：渲染完成后读一次生成的 PNG 再交付。能生成不代表布局没问题
+   （标签重叠、空图、坐标轴被裁都可能在"成功"之后才发现）。
+8. **临时文件必须清干净**：数据 JSON、batch spec、预览图、调试用的 SVG 都算临时文件，
+   交付前全部删除，只保留最终要交付的图片。能不走磁盘就别走（`--data -` 从 stdin 传）。
 
 ## 快速开始
 
 ```bash
-# 1. 看有哪些图可用
-mint list
-
-# 2. 看某张图需要什么数据结构（会给出可直接运行的示例）
-mint info bar
-
-# 3. 用示例数据直接出一张图（不需要准备数据）
-mint render bar -o demo.png
-
-# 4. 用自己的数据出图
+mint list                                   # 27 种图表一览
+mint info bar                               # 某张图的数据结构、选项与示例
+mint palettes                               # 期刊调色板
+mint styles                                 # 可用风格
 mint render bar --data revenue.json --title "各区域季度营收" --subtitle "单位：百万元" -o revenue.png
+mint render scatter -d points.json --set trend=linear --set xLegend="干预强度" -o fit.svg
+mint doctor                                 # 环境自检
 ```
-
-数据也可以从标准输入读：`cat data.json | mint render bar --data - -o out.png`。
-
-## 临时文件与清理（硬性要求）
-
-**mint 自身不产生任何临时文件**：它只写入 `-o` 指定的那一个路径。
-所以只要管住自己喂给 mint 的输入，收工时目录就是干净的。
-
-### 首选：干脆不落盘
-
-数据用 stdin 传，连数据文件都不用建：
-
-```bash
-printf '%s' '[
-  { "quarter": "Q1", "华东": 128, "华北": 96 },
-  { "quarter": "Q2", "华东": 152, "华北": 108 }
-]' | mint render bar --data - --title "各区域季度营收" --subtitle "单位：百万元" -o revenue.png
-```
-
-只想先看一眼效果时，输出到临时目录而不是工作区：
-
-```bash
-preview="$(mktemp -d)/preview.png"
-mint render bar -o "$preview"     # 看完即可，不要留在项目目录里
-```
-
-### 必须落盘时：放进临时目录 + trap 兜底
-
-数据量大、或要用 `mint batch` 时，把**所有输入**写进临时目录，并用 `trap` 保证
-即使中途报错也会清理：
-
-```bash
-tmp="$(mktemp -d)"
-trap 'rm -rf "$tmp"' EXIT
-
-# 输入全部放 $tmp
-cp data.json "$tmp/data.json"
-cat > "$tmp/report.json" <<'JSON'
-{
-  "defaults": { "palette": "indigo", "scale": 2 },
-  "charts": [
-    { "chart": "bar", "dataFile": "data.json", "out": "out/01-revenue.png", "title": "各区域季度营收" }
-  ]
-}
-JSON
-
-mint batch "$tmp/report.json"     # out 指向真实交付目录，输入留在 $tmp
-# 退出时 trap 自动删除 $tmp
-```
-
-关键点：
-
-- **输出指向最终交付目录**（`./out/` 或用户指定的位置），**输入全放 `$tmp`**。
-- 不要把中间文件丢在仓库根目录、当前目录或用户的笔记/文档目录里。
-- 不要为了"保险"把数据文件留在旁边——用户没要的都不要留。
-- 别用 `--format both`，它会额外写一个 SVG；只有明确需要矢量图时才输出 SVG。
-
-### 交付前收尾清单
-
-逐条确认，缺一不可：
-
-- [ ] 自己写过的数据文件、spec 文件、预览图、调试 SVG **已全部删除**
-- [ ] 只留下用户明确要的图片文件（默认就是 PNG）
-- [ ] 临时目录已随 `trap` 清理，没有 `mktemp` 残留
-- [ ] `ls -la` 检查过工作区，没有 `*.json` / `*.svg` / `*.tmp` / `*.log` 之类的新增残留
-- [ ] 交付说明里只提最终图片的路径，不夹带中间文件
-
-> 判断标准很简单：**把这次任务新增的文件列出来，除了图片，其它都应该已经不存在了。**
-
-## 命令总览
-
-| 命令 | 作用 |
-|------|------|
-| `mint list [--category trend] [--json]` | 列出全部图表 |
-| `mint info <chart> [--json]` | 单张图的说明、数据结构、选项与完整示例 |
-| `mint render <chart> [选项]` | 渲染一张图 |
-| `mint batch <file.json>` | 一次渲染多张图 |
-| `mint palettes` | 列出调色板 |
-| `mint doctor` | 自检环境（字体、光栅化后端、skill 安装状态） |
-| `mint install skill` | 把本 skill 软链到 `~/.agents/skills/mint` |
-| `mint skill path` | 打印 skill 实际所在目录 |
 
 `mint render` 常用参数：
 
 | 参数 | 说明 | 默认 |
 |------|------|------|
-| `-d, --data <file\|->` | 数据文件，`-` 表示 stdin；省略则用该图的内置示例数据 | 示例数据 |
-| `-o, --out <file>` | 输出路径 | `./<chart>.png` |
-| `-t, --title <text>` | 主标题 | 无 |
-| `-s, --subtitle <text>` | 副标题 | 无 |
-| `--footnote <text>` | 左下角脚注（常用来写数据来源） | 无 |
-| `-W, --width <n>` / `-H, --height <n>` | 逻辑尺寸 | 1280 × 760 |
-| `--scale <n>` | 像素倍数，2 即 2x 高清 | 2 |
-| `--theme <light\|dark>` | 主题 | light |
-| `--palette <id>` | 调色板，见 `mint palettes` | mint |
-| `--format <png\|svg\|both>` | 输出格式 | png |
-| `--set key=value` | 设置图表选项，可重复 | — |
-| `--options '<json>'` | 用 JSON 一次性传选项 | — |
-| `--json` | 输出机器可读的结果 | — |
-
-## 数据怎么写
-
-**大多数情况只需要一个数组**，mint 会自己判断哪列是分类、哪列是数值：
-
-```json
-[
-  { "quarter": "Q1", "华东": 128, "华北": 96 },
-  { "quarter": "Q2", "华东": 152, "华北": 108 }
-]
-```
-
-`mint render bar --data revenue.json --title "各区域季度营收"` 就能出图。
-
-其他常见形状 mint 也能直接吃：
-
-```jsonc
-// 占比类：对象或键值对数组都行
-{ "搜索": 348, "社交": 266 }              // → pie / waffle / funnel
-[["搜索", 348], ["社交", 266]]
-
-// 折线类：系列结构，或扁平记录自动分组
-[{ "id": "Web", "data": [{ "x": "1月", "y": 42 }] }]
-[{ "x": "1月", "y": 42, "channel": "Web" }]   // --set seriesBy=channel
-
-// 层级类：嵌套，或用斜杠路径自动建树
-{ "name": "总计", "children": [{ "name": "华东", "value": 320 }] }
-[{ "path": "线上/华东/上海", "value": 120 }]   // → treemap / sunburst / icicle
-
-// 流向类
-{ "links": [{ "source": "搜索", "target": "注册", "value": 320 }] }  // → sankey
-
-// 架构类：层 + 方块 + 箭头
-{ "layers": [{ "name": "接入层", "nodes": [{ "id": "gateway", "label": "API 网关" }] }],
-  "edges": [{ "from": "web", "to": "gateway" }] }                      // → architecture
-```
-
-数据是 CSV 时，先用任意方式转成 JSON 数组再喂给 mint。
+| `-d, --data <file\|->` | 数据 JSON，`-` 表示 stdin | 该图的内置示例数据 |
+| `-o, --out <file>` | 输出路径（不带扩展名会自动补），`-` 输出 SVG 到 stdout | `./<chart>.png` |
+| `-t, --title` / `-S, --subtitle` / `--footnote` | 标题、副标题、脚注 | 无 |
+| `-W, --width` / `-H, --height` | 画布尺寸，**英寸** | 7 × 4.35 |
+| `--dpi` | 分辨率 | 300 |
+| `-f, --format` | `png` / `svg` / `both` | `png` |
+| `-p, --palette` | 调色板 id | `npg` |
+| `--style` | 风格 id | `professional` |
+| `--set k=v` | 图表选项，可重复 | — |
+| `--options <json>` | 一次性传多个图表选项 | — |
+| `--json` | 输出机器可读结果 | — |
 
 ## 选图速查
 
-| 你想表达 | 用 | 备注 |
-|---------|-----|------|
-| 类别之间比大小 | `bar` | 横向用 `--set layout=horizontal` |
-| 总量随时间变化 | `line` / `stream` | 看总量+结构变化用 `stream` |
-| 各部分占比 | `pie` / `waffle` / `treemap` | 分类多、有层级用 `treemap` |
-| 层级拆解 | `treemap` / `sunburst` / `icicle` | 要文字标签用 `icicle` |
-| 转化/流失 | `funnel` | 逐级人数递减 |
-| 来源到去向 | `sankey` | 带宽即数量 |
-| 两个变量关系 | `scatter` | 第三个变量用气泡 |
-| 二维强度分布 | `heatmap` | 时段×星期这类交叉 |
-| 一年节律 | `calendar` | 类似 GitHub 贡献图 |
-| 名次此消彼长 | `bump` | `--set variant=area` 换面积式 |
-| 多项 KPI 达成 | `bullet` | 实际值/目标值/区间一体 |
-| 多维度对照 | `radar` / `parallel-coordinates` | 维度 ≤ 8 用雷达 |
-| 系统/服务架构 | `architecture` | 分层方块 + 依赖箭头，`--set direction=horizontal` 可横排 |
+| 你想表达 | 用哪张图 |
+|----------|----------|
+| 比较几个类别的数值 | `bar`（横向 `--set layout=horizontal`，排序 `--set sort=desc`） |
+| 类别很多、想让画面透气 | `lollipop` |
+| 看数值随时间的变化 | `line`（`--set area=true` 变面积图） |
+| 看构成比例随时间变化 | `stream`（`--set baseline=symmetric` 河流图） |
+| 看排名变化 | `bump` |
+| 看整体占比 | `pie`（环形）或 `waffle`（华夫） |
+| 两类分类的交叉占比 | `marimekko` |
+| 两个变量的相关性 | `scatter`（`--set trend=linear` 加拟合线） |
+| 多维对象对比 | `radar`、`parallel-coordinates` |
+| 二维网格上的数值分布 | `heatmap`（相关矩阵就用它） |
+| 一年里的时间分布 | `calendar` |
+| 数值分布形态 | `histogram`、`boxplot`（`--set showPoints=true` 加蜂群散点）、`ridgeline` |
+| 单值达成情况 | `bullet` |
+| 层级占比 | `treemap`、`sunburst`、`icicle`、`circle-packing` |
+| 转化漏斗 | `funnel` |
+| 流向与分流 | `sankey` |
+| 流程/状态流转 | `flowchart` |
+| 交互时序 | `sequence` |
+| 分层架构 | `architecture` |
 
-完整的图表清单与每张图的适用/不适用场景见 [references/charts.md](references/charts.md)。
+## 数据结构怎么写
 
-## 常用配方
+三种最常见形状（其余见 `mint info <chart>`）：
 
-见 [references/recipes.md](references/recipes.md)，包括：
-年度报告配图、埋点数据漏斗、渠道占比、季度对比、暗色主题用于深色 PPT 等。
+```jsonc
+// 1) 行式：一行一条记录，第一个字符串字段是分类轴，数值字段是系列
+[ { "quarter": "Q1", "华东": 128, "华北": 96 },
+  { "quarter": "Q2", "华东": 152, "华北": 108 } ]
 
-## 主题与调色板
+// 2) 占比/单值：id + value（也接受 {名称: 数值} 或 [["名称", 数值]]）
+[ { "id": "搜索", "value": 348 }, { "id": "社交", "value": 266 } ]
 
-```bash
-mint palettes                      # 查看全部调色板
-mint render bar --theme dark --palette sunset -o out.png
+// 3) 关系/坐标：任意字段名，用 xKey/yKey 指定
+[ { "x": 12.4, "y": 88, "group": "对照组" } ]
 ```
 
-主题只管明暗，调色板管色彩倾向。深色底用 `--theme dark`，
-正式报告推荐 `--palette indigo`（稳），产品增长类推荐默认的 `mint`（清爽）。
+需要显式指定字段时用 `--set`：`--set indexBy=quarter --set keys=华东,华北`。
 
-## 自检与排错
+## 排版与尺寸
+
+- 画布用英寸：`--width 3.5` 单栏、`--width 7` 双栏（默认）、`--width 10` 幻灯片。
+- 高度只给宽度时，mint 会按内容比例自动撑高（饼图、雷达图这类方图不会留一大片空白）。
+- 标题/副标题/脚注占用的高度会从图表区扣掉，不会压到图上。
+- 字号是期刊尺度（坐标轴 7pt、标题 11pt），所以**不要为了"看得清"把画布缩到 2 英寸以下**。
+
+## 风格与配色
+
+- 目前内置 `professional` 一种风格（期刊级）；后续会加更多场景风格，用 `mint styles` 查看。
+- 调色板默认 `npg`（Nature 系）。医学/临床用 `nejm`，投稿要色盲安全用 `okabe`，
+  黑白印刷用 `greys`；连续映射（热力图/日历图）用 `blue` / `viridis`，有正负用 `rdbu`。
+- 同一张图里系列超过 6 个就该拆图或改用堆叠，不要靠调色板硬撑。
+
+## 批量出图
+
+一个进程出多张图，比逐张调 CLI 快得多：
 
 ```bash
-mint doctor        # 字体、光栅化后端、skill 安装状态
-MINT_DEBUG=1 mint render bar -o out.png   # 打印 React 层的渲染告警
+mint batch report.json --outdir out/
 ```
 
-- **中文显示成方框**：系统缺中文字体，用 `--font /path/to/font.ttc` 指定，或设置 `MINT_FONT`。
-- **报 `CANVAS_TOO_SMALL`**：画布减去标题和留白后没地方画图了，调大 `--width` / `--height`。
-- **报 `INVALID_DATA`**：数据结构不符合该图表要求，`mint info <chart>` 里有正确示例。
-- **图出来了但不满意**：先 `mint info <chart>` 看有没有现成选项（比如 `legend`、`valueFormat`、
-  `xLegend`），再考虑换图。
+```jsonc
+{
+  "defaults": { "width": 7, "palette": "npg", "style": "professional" },
+  "charts": [
+    { "chart": "bar",  "data_file": "revenue.json", "title": "季度营收", "out": "revenue.png" },
+    { "chart": "line", "data": [ /* 内联数据 */ ], "title": "趋势", "out": "trend.svg",
+      "format": "svg", "options": { "points": true } }
+  ]
+}
+```
 
-## 在报告里使用
+明细见 [references/spec.md](references/spec.md)。
 
-- 生成 2x 图（默认）嵌入 Markdown/HTML 报告，缩放到一半宽度即清晰。
-- 需要矢量图给 LaTeX/排版软件时用 `--format svg`。
-- 一组报告图建议统一 `--palette` 与 `--width`，并给每张图写 `--footnote "数据来源：…"`。
+批量在**一个 R 进程**里渲染所有图：单张冷启动约 1.2 秒（R 启动 + 加载 ggplot2 占 0.8 秒），
+批量则约 0.5 秒/张。要出多张图就用 `mint batch`，不要循环调 `mint render`。
+
+## 排错
+
+| 现象 | 处理 |
+|------|------|
+| `mint: command not found` | 把 mint 所在目录加进 PATH |
+| `mint: 找不到 Rscript` | 先装 R：`brew install r` 或 https://cran.r-project.org |
+| `[MISSING_PACKAGE]` | 运行 `Rscript scripts/install-deps.R` 装依赖 |
+| `[CANVAS_TOO_SMALL]` | 画布太小，调大 `--width` / `--height` |
+| `[INVALID_DATA]` | 数据形状不对，`mint info <chart>` 看正确形状 |
+| 中文变成方框 | 装一个中文字体（Noto Sans CJK / 思源黑体），或 `--font-family` 指定已装字体 |
+| 图太大/太小 | 尺寸按英寸算，7 × 4.35 @300dpi = 2100 × 1305 px |
+| 想看堆栈 | `MINT_DEBUG=1 mint render ...` |
+
+## 环境变量
+
+| 变量 | 作用 |
+|------|------|
+| `MINT_FONT_FAMILY` | 指定字体家族名 |
+| `MINT_FONT` | 指定字体文件（.ttf/.otf/.ttc），会注册成 mint 专用字体 |
+| `MINT_LIB` | R 依赖库位置，默认 `~/.local/share/mint/rlib` |
+| `MINT_SKILLS_DIR` | skill 安装根目录，默认 `~/.agents/skills` |
+| `MINT_DEBUG=1` | 出错时打印 R 堆栈 |

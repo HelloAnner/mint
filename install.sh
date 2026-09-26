@@ -1,94 +1,84 @@
-#!/usr/bin/env bash
-#
-# mint 安装脚本
+#!/bin/sh
+# mint 一键安装：装 R 依赖 → 装 CLI shim → 装 skill 软链 → 自检
 #
 #   curl -fsSL https://raw.githubusercontent.com/HelloAnner/mint/main/install.sh | bash
 #
-# 做三件事：按平台下载预编译二进制 → 装到 $PREFIX/bin → 安装 skill 软链。
-# 可用环境变量覆盖：
-#   MINT_PREFIX   安装前缀，默认 ~/.local（二进制落在 $MINT_PREFIX/bin）
-#   MINT_VERSION  latest 或具体 tag（如 v0.1.0），默认 latest
-#   MINT_REPO     仓库，默认 HelloAnner/mint
+# 可用环境变量：
+#   MINT_PREFIX   安装前缀，默认 ~/.local（CLI 落到 $MINT_PREFIX/bin/mint）
+#   MINT_VERSION  latest 或具体 tag，如 v0.2.0
+#   MINT_REPO     覆盖仓库，默认 HelloAnner/mint
+#   MINT_LIB      R 依赖库位置，默认 ~/.local/share/mint/rlib
+#   MINT_CRAN     CRAN 镜像
 
-set -euo pipefail
+set -e
 
-REPO="${MINT_REPO:-HelloAnner/mint}"
-PREFIX="${MINT_PREFIX:-$HOME/.local}"
-BIN_DIR="$PREFIX/bin"
-VERSION="${MINT_VERSION:-latest}"
+MINT_PREFIX=${MINT_PREFIX:-$HOME/.local}
+MINT_VERSION=${MINT_VERSION:-latest}
+MINT_REPO=${MINT_REPO:-HelloAnner/mint}
+MINT_LIB=${MINT_LIB:-$HOME/.local/share/mint/rlib}
+MINT_SRC=${MINT_SRC:-$HOME/.local/share/mint}
 
-info() { printf '  %s\n' "$*"; }
-fail() { printf '\n✗ %s\n' "$*" >&2; exit 1; }
+say() { printf '%s\n' "$*"; }
+die() { printf 'mint: %s\n' "$*" >&2; exit 1; }
 
-command -v curl >/dev/null 2>&1 || fail "缺少 curl，请先安装"
+# ── 1. 前置检查 ─────────────────────────────────────────────
+command -v Rscript >/dev/null 2>&1 || die "找不到 Rscript。请先装 R：
+    macOS:  brew install r
+    其它:   https://cran.r-project.org/bin/"
+say "R: $(Rscript --vanilla -e 'cat(R.version.string)' 2>/dev/null)"
 
-# ── 判断平台 ──────────────────────────────────────────────
-os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-case "$os" in
-  darwin) os=darwin ;;
-  linux)  os=linux ;;
-  *) fail "暂不支持的系统：${os}（目前提供 macOS 与 Linux）" ;;
-esac
-
-case "$(uname -m)" in
-  arm64|aarch64) arch=arm64 ;;
-  x86_64|amd64)  arch=x64 ;;
-  *) fail "暂不支持的架构：$(uname -m)" ;;
-esac
-
-asset="mint-${os}-${arch}"
-
-if [ "$VERSION" = "latest" ]; then
-  base="https://github.com/$REPO/releases/latest/download"
+# ── 2. 取源码 ──────────────────────────────────────────────
+if [ -f "./R/main.R" ] && [ -d "./skills/mint" ]; then
+  # 从仓库里直接跑
+  MINT_HOME=$(cd "$(dirname "$0")" && pwd)
+  say "使用当前目录作为 mint 安装目录：$MINT_HOME"
 else
-  base="https://github.com/$REPO/releases/download/$VERSION"
-fi
-
-printf '\nmint 安装程序\n'
-info "平台    $os-$arch"
-info "版本    $VERSION"
-info "安装到  $BIN_DIR/mint"
-printf '\n'
-
-# 所有中间文件都在临时目录里，退出时（含异常）自动清理
-tmp="$(mktemp -d)"
-trap 'rm -rf "$tmp"' EXIT
-
-info "下载 $base/$asset"
-curl -fsSL "$base/$asset" -o "$tmp/mint" \
-  || fail "下载失败：${base}/${asset}（该平台可能还没有发布产物）"
-chmod +x "$tmp/mint"
-
-# ── 校验和（取不到就跳过，不阻断安装）────────────────────
-if curl -fsSL "$base/SHA256SUMS" -o "$tmp/SHA256SUMS" 2>/dev/null; then
-  expected="$(awk -v a="$asset" '$2 == a { print $1 }' "$tmp/SHA256SUMS" | head -1)"
-  if [ -n "$expected" ]; then
-    if command -v sha256sum >/dev/null 2>&1; then
-      actual="$(sha256sum "$tmp/mint" | awk '{ print $1 }')"
-    else
-      actual="$(shasum -a 256 "$tmp/mint" | awk '{ print $1 }')"
-    fi
-    [ "$expected" = "$actual" ] && info "校验和 ✓" || fail "SHA256 校验不通过，已中止"
+  if [ "$MINT_VERSION" = "latest" ]; then
+    URL="https://github.com/$MINT_REPO/archive/refs/heads/main.tar.gz"
+  else
+    URL="https://github.com/$MINT_REPO/archive/refs/tags/$MINT_VERSION.tar.gz"
   fi
+  TMP=$(mktemp -d)
+  trap 'rm -rf "$TMP"' EXIT
+  say "下载 $URL"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$URL" | tar xz -C "$TMP"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO- "$URL" | tar xz -C "$TMP"
+  else
+    die "需要 curl 或 wget"
+  fi
+  mkdir -p "$MINT_SRC"
+  rm -rf "$MINT_SRC.old" && [ -d "$MINT_SRC" ] && mv "$MINT_SRC" "$MINT_SRC.old" || true
+  mv "$TMP"/*/ "$MINT_SRC"
+  rm -rf "$MINT_SRC.old"
+  MINT_HOME="$MINT_SRC"
+  say "已解压到 $MINT_HOME"
 fi
 
-mkdir -p "$BIN_DIR"
-mv "$tmp/mint" "$BIN_DIR/mint"
-chmod +x "$BIN_DIR/mint"
-info "已安装 CLI：$BIN_DIR/mint"
+# ── 3. 装 R 依赖 ───────────────────────────────────────────
+say "安装 R 依赖到 $MINT_LIB（首次会编译几百个源包，慢是正常的）"
+MINT_LIB="$MINT_LIB" MINT_CRAN="${MINT_CRAN:-}" Rscript "$MINT_HOME/scripts/install-deps.R"
 
-# ── 安装 skill（二进制内嵌了 skill 内容，这一步会释放并软链）──
-"$BIN_DIR/mint" install skill --force || fail "安装 skill 失败"
+# ── 4. 装 CLI ─────────────────────────────────────────────
+mkdir -p "$MINT_PREFIX/bin"
+chmod +x "$MINT_HOME/bin/mint"
+ln -sfn "$MINT_HOME/bin/mint" "$MINT_PREFIX/bin/mint"
+say "已安装 CLI：$MINT_PREFIX/bin/mint"
 
-printf '\n'
-"$BIN_DIR/mint" doctor || true
+# ── 5. 装 skill ───────────────────────────────────────────
+SKILLS_DIR=${MINT_SKILLS_DIR:-$HOME/.agents/skills}
+mkdir -p "$SKILLS_DIR"
+ln -sfn "$MINT_HOME/skills/mint" "$SKILLS_DIR/mint"
+say "已安装 skill：$SKILLS_DIR/mint"
 
+# ── 6. 自检 ───────────────────────────────────────────────
 case ":$PATH:" in
-  *":$BIN_DIR:"*) ;;
-  *)
-    printf '\n提醒：%s 不在 PATH 中，把下面一行加到 shell 配置里：\n' "$BIN_DIR"
-    printf '  export PATH="%s:$PATH"\n' "$BIN_DIR"
-    ;;
+  *":$MINT_PREFIX/bin:"*) ;;
+  *) say ""; say "提示：把 $MINT_PREFIX/bin 加进 PATH："
+     say "  echo 'export PATH=\"$MINT_PREFIX/bin:\$PATH\"' >> ~/.zshrc" ;;
 esac
-
-printf '\n完成。试试：mint render bar -o out.png\n\n'
+say ""
+MINT_LIB="$MINT_LIB" "$MINT_PREFIX/bin/mint" doctor || true
+say ""
+say "完成。试一张：$MINT_PREFIX/bin/mint render bar -o /tmp/mint-check.png"

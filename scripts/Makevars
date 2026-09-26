@@ -1,0 +1,23 @@
+# mint 的 R 包编译参数。
+#
+# R 4.6 把 C 标准直接写进了 CC 定义（CC = clang -std=gnu23），而 macOS 自带的
+# Command Line Tools clang（15.x）还不认识 gnu23，导致任何带 C/C++ 源码的包都编译失败。
+# 这里把编译器定义整体降一档到 C17 / C++17：待装的 CRAN 包都不需要 C23 特性，
+# 换来的是「零额外依赖、开箱即装」。
+#
+# install-deps.R 通过 R_MAKEVARS_USER 指向本文件，不动用户自己的 ~/.R/Makevars。
+
+CC=clang -std=gnu17
+CC23=clang -std=gnu17
+CC17=clang -std=gnu17
+
+CXX=clang++ -std=gnu++17
+CXX23=clang++ -std=gnu++17
+CXX26=clang++ -std=gnu++17
+
+CFLAGS=-O2
+CXXFLAGS=-O2
+C17FLAGS=-O2
+C23FLAGS=-O2
+CXX17FLAGS=-O2
+CXX23FLAGS=-O2

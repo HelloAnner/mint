@@ -10,66 +10,62 @@ permissions:
 
 jobs:
   release:
-    name: 交叉编译并发布
+    name: 校验并发布
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: r-lib/actions/setup-r@v2
         with:
-          bun-version: latest
+          r-version: release
+          use-public-rspm: true
 
-      - name: 校验 tag 与 package.json 版本一致
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
+            libfontconfig1-dev fonts-noto-cjk
+          fc-cache -f
+
+      # 发布产物是源码（install.sh 从 tag 对应的 tarball 安装），因此发布前必须
+      # 保证这个 tag 对应的代码真的能装、能跑、能出全部图
+      - name: 校验 tag 与代码里的版本号一致
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          pkg="$(bun -e 'console.log((await Bun.file("package.json").json()).version)')"
-          echo "tag=$tag  package.json=$pkg"
-          [ "$tag" = "$pkg" ] || { echo "::error::tag $GITHUB_REF_NAME 与 package.json 的 $pkg 不一致"; exit 1; }
+          version="$(sed -n 's/^MINT_VERSION <- "\(.*\)"/\1/p' R/cli.R)"
+          echo "tag=$tag  代码=$version"
+          [ "$tag" = "$version" ] || { echo "::error::$GITHUB_REF_NAME 与 R/cli.R 里的 $version 不一致"; exit 1; }
 
       - name: 安装依赖
-        run: bun install --frozen-lockfile
+        run: Rscript scripts/install-deps.R
+        env:
+          MINT_NCPUS: 2
 
-      - name: 生成内嵌 skill 清单与图表文档
-        run: bun run scripts/embed.ts
+      - name: 测试
+        run: Rscript tests/run-tests.R
 
-      # bun 自带交叉编译：resvg 是 wasm、skill 走 file 导入，产物与宿主平台无关
-      - name: 编译各平台二进制
+      - name: 渲染全部图表示例（发布时随附）
+        run: Rscript scripts/examples.R release/previews --dpi=150
+
+      - name: 冒烟：从 tarball 安装
         run: |
           set -euo pipefail
-          mkdir -p release
+          src="$RUNNER_TEMP/install-check"
+          mkdir -p "$src"
+          tar --exclude=.git --exclude=release -cf - . | tar -xf - -C "$src"
+          cd "$src"
+          MINT_LIB="$HOME/.local/share/mint/rlib" ./bin/mint doctor
+          MINT_LIB="$HOME/.local/share/mint/rlib" ./bin/mint render bar -o "$RUNNER_TEMP/check.png"
+          file "$RUNNER_TEMP/check.png"
 
-          declare -a targets=(
-            "mint-darwin-arm64:bun-darwin-arm64"
-            "mint-darwin-x64:bun-darwin-x64"
-            "mint-linux-x64:bun-linux-x64"
-            "mint-linux-arm64:bun-linux-arm64"
-          )
-
-          for entry in "${targets[@]}"; do
-            asset="${entry%%:*}"
-            target="${entry##*:}"
-            echo "::group::编译 $asset"
-            # --production：JSX 走生产版 jsx-runtime；开发版在单文件二进制里会解析成 undefined
-            bun build --compile --production --minify --target="$target" --outfile="release/$asset" src/cli.ts
-            echo "::endgroup::"
-          done
-
-          ls -lh release
-
-      - name: 生成 SHA256 校验和
-        run: |
-          cd release
-          sha256sum mint-* > SHA256SUMS
-          cat SHA256SUMS
-
-      - name: 发布 Release
+      - name: 发布
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/mint-*
-            release/SHA256SUMS
+            release/previews/*.png
+            release/previews/*.svg
           generate_release_notes: true
           draft: false
