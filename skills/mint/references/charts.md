@@ -623,6 +623,7 @@ edges 支持 from/to（也可写 source/target），label 是连线上的小标�
 | `yKey` | 字符串 | y | Y 字段（长表） |
 | `valueKey` | 字符串 | value | 数值字段（长表） |
 | `showValues` | 布尔 | TRUE | 是否在格子里写数值 |
+| `showScale` | 布尔 | TRUE | 是否画右侧色条 |
 | `ramp` | 字符串 | blue | 色阶调色板 id |
 | `reverse` | 布尔 | FALSE | 色阶是否反向 |
 | `xLegend` | 字符串 | — | X 轴标题 |

@@ -110,7 +110,7 @@ mint_theme <- function(style, family, grid = "y", legend_position = NULL) {
   grid_x <- switch(grid, "x" = TRUE, "both" = TRUE, FALSE)
   grid_y <- switch(grid, "y" = TRUE, "both" = TRUE, FALSE)
 
-  ggplot2::theme_minimal(base_family = family, base_size = ty$axis_text) +
+  theme <- ggplot2::theme_minimal(base_family = family, base_size = ty$axis_text) +
     ggplot2::theme(
       text = ggplot2::element_text(family = family, colour = t$text),
       plot.background = ggplot2::element_rect(fill = t$bg, colour = NA),
@@ -162,6 +162,8 @@ mint_theme <- function(style, family, grid = "y", legend_position = NULL) {
                                            margin = ggplot2::margin(t = 6), hjust = 0, family = family),
       complete = TRUE
     )
+
+  theme
 }
 
 #' 分类色标（填充）
@@ -177,13 +179,20 @@ mint_scale_colour <- function(colors, values = NULL, name = NULL, labels = NULL)
 }
 
 #' 连续色标（热力图、日历图等）
+#'
+#' 尺寸一律走主题里的 legend.key.size —— 这是踩过坑的：
+#' ggplot2 3.5 起 guide_colourbar() 的 barwidth / barheight 已废弃，传了会算不出图例尺寸
+#' （整条色标被挤没或被画布裁掉）；而显式设置 theme 里的 legend.key.width/height
+#' 在 4.0.3 上同样会让色标宽度算错、被右边界裁切。保持默认最稳。
 mint_scale_fill_continuous <- function(palette = NULL, reverse = FALSE, name = NULL, labels = NULL) {
   ggplot2::scale_fill_gradientn(
     colours = mint_get_ramp(palette, reverse),
     name = name, labels = labels,
-    guide = ggplot2::guide_colourbar(barwidth = grid::unit(60, "pt"),
-                                     barheight = grid::unit(6, "pt"),
-                                     frame.colour = NA, ticks.colour = "#BDBDBD")
+    guide = ggplot2::guide_colourbar(
+      frame.colour = NA,
+      ticks.colour = "#B5B5B5",
+      ticks.linewidth = 0.3
+    )
   )
 }
 

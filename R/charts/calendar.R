@@ -217,8 +217,7 @@ mint_register(mint_chart(
                                  name = NULL, labels = fmt) +
       # 右侧图例要一条竖着的细色条，而不是默认的横条
       ggplot2::guides(fill = if (legend) {
-        ggplot2::guide_colourbar(barwidth = grid::unit(5, "pt"), barheight = grid::unit(52, "pt"),
-                                 frame.colour = NA, ticks.colour = "#BDBDBD")
+        ggplot2::guide_colourbar(frame.colour = NA, ticks.colour = "#B5B5B5", ticks.linewidth = 0.3)
       } else "none") +
       ggplot2::theme(
         axis.line = ggplot2::element_blank(),
