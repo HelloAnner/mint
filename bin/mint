@@ -6,7 +6,7 @@
 
 set -e
 
-MINT_HOME=${MINT_HOME:-$(cd "$(dirname "$0")/.." && pwd)}
+MINT_HOME=${MINT_HOME:-$(cd "$(dirname "$(readlink "$0" 2>/dev/null || printf '%s' "$0")")/.." && pwd)}
 MINT_LIB=${MINT_LIB:-$HOME/.local/share/mint/rlib}
 
 if ! command -v Rscript >/dev/null 2>&1; then
